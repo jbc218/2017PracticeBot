@@ -29,13 +29,12 @@ public class Robot extends IterativeRobot {
 	
 	Iterator iteratorEnabled = new Iterator();
 	Iterator iteratorDisabled = new Iterator(); //to do functions while idle, implement later
-	DriveTrain drive;
-	Shooter sh;
-	Elevator elev;
-	Climber cli;
-	Agitator agi;
-	VisionProcessor vision;
-	OI oi;
+	public static DriveTrain drive;
+	static Shooter sh;
+	static Elevator elev;
+	static Agitator agi;
+	static VisionProcessor vision;
+	static OI oi;
 	private boolean tunePID=false;
 	public static double closeLoopTime=0;
 	
@@ -49,7 +48,6 @@ public class Robot extends IterativeRobot {
         	iteratorEnabled.register(drive.getLoop());
         	iteratorEnabled.register(sh.getLoop());
         	iteratorEnabled.register(elev.getLoop());
-        	iteratorEnabled.register(cli.getLoop());
         	iteratorEnabled.register(agi.getLoop());
         	iteratorEnabled.register(vision.getLoop());
         	iteratorDisabled.register(new GyroCalibrator());
@@ -161,13 +159,13 @@ public class Robot extends IterativeRobot {
     	RobotMap.right1.setPosition(0);
     	//RobotMap.g.reset();
     }
-    private void writeAllToCSV(){
+    public void writeAllToCSV(){
         RobotMap.writer.writeNext(drive.valString().split("#"), false);
     }
     /**
      * This would be a valid time to make a CSVWriterFactory that uses an iterator variable to loop in the background, but I'm not enterprise enough to do that
      */
-    private void createNewCSV(){
+    public void createNewCSV(){
     	try{
     		double t=Timer.getFPGATimestamp();
     		Calendar now = Calendar.getInstance();

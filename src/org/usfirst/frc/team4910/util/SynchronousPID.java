@@ -1,6 +1,7 @@
 package org.usfirst.frc.team4910.util;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.util.BoundaryException;
 
 /**
@@ -16,7 +17,6 @@ public class SynchronousPID {
     private double m_I; // factor for "integral" control
     private double m_D; // factor for "derivative" control
     private double m_F; // factor for feed forward
-    private double m_V; // factor for voltage control
     private double m_IZone = 0.0; // only adds to I if error is larger than this 
     private double m_maximumOutput = 1.0; // |maximum output|
     private double m_minimumOutput = -1.0; // |minimum output|
@@ -43,7 +43,7 @@ public class SynchronousPID {
     private double m_outputDirection=1.0; // multiplies the output by 1 or -1
     private double m_inputDirection=1.0; // multiplies the sensor reading by 1 or -1
     private double m_errSample=0.0;
-    private double m_time=0.0;
+    private double m_startTime=0.0;
     private double m_errTolerance=0.0;
     private double m_minimumTimeToRun=0.0;
     public SynchronousPID() {
@@ -64,7 +64,6 @@ public class SynchronousPID {
         m_I = Ki;
         m_D = Kd;
         m_F = 0.0;
-        m_V = 0.0;
     }
     
     /**
@@ -84,28 +83,8 @@ public class SynchronousPID {
         m_I = Ki;
         m_D = Kd;
         m_F = Kf;
-        m_V = 0.0;
     }
     
-    /**
-     * Allocate a PID object with the given constants for P, I, D
-     *
-     * @param Kp
-     *            the proportional coefficient
-     * @param Ki
-     *            the integral coefficient
-     * @param Kd
-     *            the derivative coefficient
-     * @param Kf
-     * 			  the feed forward coefficient
-     */
-    public SynchronousPID(double Kp, double Ki, double Kd, double Kf, double Kv) {
-        m_P = Kp;
-        m_I = Ki;
-        m_D = Kd;
-        m_F = Kf;
-        m_V = Kv;
-    }
 
     /**
      * Read the input, calculate the output accordingly, and write to the
@@ -140,7 +119,7 @@ public class SynchronousPID {
 
         // Don't blow away m_error so as to not break derivative
         double proportionalError = Math.abs(m_error) < m_deadband ? 0 : m_error;
-        m_result = (m_P * proportionalError + m_I * m_totalError + m_D * (m_error - m_prevError) + m_F * m_setpoint + (Math.abs(m_setpoint)<=50 ? 0 : 1)*m_V*(12.5-DriverStation.getInstance().getBatteryVoltage()));
+        m_result = (m_P * proportionalError + m_I * m_totalError + m_D * (m_error - m_prevError) + m_F * m_setpoint);
         m_prevError = m_error;
 
         if (m_result > m_maximumOutput) {
@@ -206,7 +185,6 @@ public class SynchronousPID {
      */
     public void setPIDFV(double p, double i, double d, double f, double v){
     	setPIDF(p,i,d,f);
-    	m_V=v;
     }
     
     /**
@@ -243,10 +221,6 @@ public class SynchronousPID {
      */
     public double getF() {
         return m_F;
-    }
-
-    public double getV() {
-        return m_V;
     }
 
     
@@ -338,7 +312,7 @@ public class SynchronousPID {
         } else {
             m_setpoint = setpoint;
         }
-        
+        m_startTime=Timer.getFPGATimestamp();
         
     }
 
@@ -370,9 +344,6 @@ public class SynchronousPID {
     public double getErrorSum(){
     	return m_totalError;
     }
-    public void setOnTime(double t){
-    	m_time=t;
-    }
     /**
      * Return true if the error is within the tolerance
      *
@@ -382,7 +353,8 @@ public class SynchronousPID {
         return m_last_input != Double.NaN && Math.abs(m_last_input - m_setpoint) < tolerance;
     }
     public boolean onTarget() {
-        return m_errSample>20 && m_setpoint!=0;
+        return m_errSample>20 && m_setpoint!=0 && Timer.getFPGATimestamp()-m_startTime>m_minimumTimeToRun 
+        		&& m_last_input!=Double.NaN && Math.abs(m_last_input - m_setpoint) < m_errTolerance;
     }
     public void setTolerance(double tol){
     	m_errTolerance=tol;

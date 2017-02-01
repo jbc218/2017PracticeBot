@@ -4,8 +4,9 @@ import org.usfirst.frc.team4910.iterations.Iterate;
 /**
  * 
  * @author Jason Cobb
- * Purpose is to move the balls around somehow. I wish it were possible to make the speed proportional to the ball count
- * but we haven't gotten there yet.
+ * Purpose is to move the balls around somehow.
+ * 
+ * Still prototyping, so no code can get pushed.
  */
 public class Agitator {
 	private Agitator instance;

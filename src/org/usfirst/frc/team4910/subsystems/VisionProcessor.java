@@ -1,14 +1,26 @@
 package org.usfirst.frc.team4910.subsystems;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.usfirst.frc.team4910.iterations.Iterate;
+import org.usfirst.frc.team4910.robot.OI;
 
+import edu.wpi.cscore.AxisCamera;
 import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.VideoProperty;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.Timer;
@@ -19,8 +31,9 @@ import edu.wpi.first.wpilibj.Timer;
  * Purpose is to capture an image when triggered and then calculate whatever distances necessary.
  * Because of the delay, it will use timestamps to determine how the data should be applied
  */
+@SuppressWarnings("unused")
 public class VisionProcessor {
-	private VisionProcessor instance;
+	private static VisionProcessor instance;
 	private static final double horizontalFOV = 67.0;
 	private static final double verticalFOV = 49.0;
 	private static final double resolutionX=320.0; //I can change these in the future
@@ -34,6 +47,8 @@ public class VisionProcessor {
 	private static final double tapeArea = 10.0; //Just area of one
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
 	private static final double heightToPegCenter = 13.25; //In inches
+	private static final double minPegContourArea=35;
+	private static HashMap<String, VideoProperty> propertyMap = new HashMap<String, VideoProperty>();
 	private static double yawAngleToTargetApproxX(double error){return (error)*degPerPixelX;}
 	private static double yawAngleToTargetApproxY(double error){return (error)*degPerPixelY;}
 	private static final double focalLengthX = resolutionX/(2.0*Math.tan(Math.toRadians((horizontalFOV/2.0))));
@@ -46,8 +61,15 @@ public class VisionProcessor {
 	private static boolean insideTarget = false;
 	private static SerialPort cam;
 	private static CvSink cvs;
+	private static double captureTime;
+	private static AxisCamera axiscam; //shouldn't be used for much
 	private static int iteration=0;
+	private static boolean hasEnabled=false;
 	private CameraServer camServer;
+	private enum VisionStates {
+			Disabled, PegTracking, BoilerTracking;
+	}
+	private VisionStates visionState=VisionStates.Disabled;
 	private static final Scalar 
 	//Color values
 	BLUE = new Scalar(255, 0, 0),
@@ -64,31 +86,44 @@ public class VisionProcessor {
 		
 		@Override
 		public void init() {
-			System.load("/usr/local/share/OpenCV/java/libopencv_java310.so");
-			BGR = new Mat();
-			HSV = new Mat();
-			blur = new Mat();
-			threshold = new Mat();
-			clusters = new Mat();
-			hierarchy = new Mat();
-			camServer = CameraServer.getInstance();
-			camServer.addAxisCamera("10.49.10.45");
-			cvs = camServer.getVideo("cam2");
-//			NetworkTable table = NetworkTable.getTable("SmartDashboard");
-			
-			cvs.setEnabled(true);
-			cvs.grabFrame(BGR);
-			boolean b = Imgcodecs.imwrite("/home/lvuser/output.png", BGR);
-			System.out.println(b);
-			insideTarget = false;
+			visionState=VisionStates.Disabled;
+			hasEnabled=false;
 		}
 
 		@Override
 		public void exec() {
+			switch(visionState){
+			case Disabled:
+				if(OI.leftStick.getRawButton(10)){
+					//no need to put a while loop, since next iteration it'll go to PegTracking
+					visionState=VisionStates.PegTracking;
+					startPegTracking();
+				}
+				break;
+			case PegTracking:
+				if(OI.leftStick.getRawButton(11)){
+					visionState=VisionStates.Disabled;
+					break;
+				}
+				processPeg();
+				break;
+			case BoilerTracking:
+				break;
+			default:
+				break;
+			}
+			
+			
+			if(OI.leftStick.getRawButton(10)){
+				visionState=VisionStates.PegTracking;
+				startPegTracking();
+				while(OI.leftStick.getRawButton(10)){}
+			}
 		}
 
 		@Override
 		public void end() {
+			visionState=VisionStates.Disabled;
 		}
 		
 	};
@@ -97,9 +132,101 @@ public class VisionProcessor {
 		return iter;
 	}
 	private VisionProcessor(){
+		System.load("/usr/local/frc/lib/libopencv_java310.so");
+		BGR = new Mat();
+		HSV = new Mat();
+		blur = new Mat();
+		threshold = new Mat();
+		clusters = new Mat();
+		hierarchy = new Mat();
+		camServer = CameraServer.getInstance();
+		axiscam = camServer.addAxisCamera("10.49.10.44");
+		cvs = camServer.getVideo(axiscam);
+
 		
 	}
-	public VisionProcessor getInstance(){
+	public static VisionProcessor getInstance(){
 		return instance==null ? instance=new VisionProcessor() : instance;
 	}
+	private static void captureImage(){
+		
+	}
+	public synchronized void startPegTracking(){
+		cvs.setEnabled(true);
+		hasEnabled=true;
+		cvs.grabFrame(BGR);
+		captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
+		boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
+		System.out.println("Able to write image: "+ b);
+		insideTarget = false;
+	
+	}
+	private synchronized void processPeg(){
+		cvs.grabFrame(BGR);
+		captureTime=Timer.getFPGATimestamp();
+		iteration++;
+		ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+		if(!BGR.empty() && !insideTarget){
+			System.out.println("Image not empty");
+			Imgproc.cvtColor(BGR, HSV, Imgproc.COLOR_BGR2HSV); //turns image to HSV format
+			Core.inRange(HSV, LOWER_BOUNDS, UPPER_BOUNDS, threshold); //applies HSV filter
+			Imgproc.findContours(threshold, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE); //Finds contours
+			
+			double contA; //contour area
+
+			
+			if(hierarchy.size().height > 0 && hierarchy.size().width > 0 && !insideTarget){
+				System.out.println("Contours found");
+				
+				Rect rec1=null, rec2=null; //one for each peg
+				Rect totalRect=null;
+				boolean hasFoundAPeg=false;
+				for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
+					contA = Imgproc.contourArea(contours.get(idx));
+					if(contA > minPegContourArea && !insideTarget){
+						System.out.println("Large contours found");
+						MatOfPoint approxf1 = new MatOfPoint();
+						MatOfPoint2f mMOP2f1 = new MatOfPoint2f(); // Converted contours
+						MatOfPoint2f mMOP2f2 = new MatOfPoint2f(); // approxPolyDP stored
+						
+						contours.get(idx).convertTo(mMOP2f1, CvType.CV_32FC2);
+						Imgproc.approxPolyDP(mMOP2f1, mMOP2f2, 7, true);
+						mMOP2f2.convertTo(contours.get(idx), CvType.CV_32S);
+						
+						mMOP2f2.convertTo(approxf1, CvType.CV_32S);
+						Imgproc.drawContours(BGR, contours, idx, WHITE);
+						if(!hasFoundAPeg){
+							rec1 = Imgproc.boundingRect(approxf1);
+							Point recMiddle = new Point(rec1.x+.5*rec1.width,rec1.y+.5*rec1.height);
+							Imgproc.circle(BGR, recMiddle, 2, BLUE);
+							hasFoundAPeg=true;
+						}else{
+							rec2 = Imgproc.boundingRect(approxf1);
+							Point recMiddle = new Point(rec2.x+.5*rec2.width,rec2.y+.5*rec2.height);
+							Imgproc.circle(BGR, recMiddle, 2, BLUE);
+							if(Math.min(rec1.tl().x, rec2.tl().x)==rec1.tl().x){
+								totalRect = new Rect(rec1.tl(), rec2.br());
+							}else{
+								totalRect = new Rect(rec2.tl(), rec1.br());
+							}
+							Imgproc.rectangle(BGR, totalRect.br(), totalRect.tl(), GREEN);
+							recMiddle = new Point(totalRect.x+.5*totalRect.width,totalRect.y+.5*totalRect.height);
+							Imgproc.circle(BGR, recMiddle, 2, RED);
+							break; //no need to go further
+						}
+						
+					}//end "check size" conditional inside for loop
+					
+					
+				}//ends "iterate over contours" loop
+				Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
+				System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width));
+				System.out.println("Angle to target Y: "+yawAngleToTargetY(totalRect.y+.5*totalRect.height));
+			}//ends "find contours" conditionals
+		
+		}//ends "is image even there" conditional
+	
+	}//end of processing
+	
+	
 }
