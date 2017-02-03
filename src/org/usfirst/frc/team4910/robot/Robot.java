@@ -12,6 +12,7 @@ import org.usfirst.frc.team4910.subsystems.DriveTrain.DriveControlState;
 import org.usfirst.frc.team4910.subsystems.*;
 import org.usfirst.frc.team4910.util.CrashTracker;
 import org.usfirst.frc.team4910.util.GyroHelper;
+import org.usfirst.frc.team4910.util.Path;
 
 import com.opencsv.CSVWriter;
 
@@ -35,6 +36,8 @@ public class Robot extends IterativeRobot {
 	static Agitator agi;
 	static VisionProcessor vision;
 	static OI oi;
+	static Path pat;
+	static SendableChooser<String> autoChoose;
 	private boolean tunePID=false;
 	public static double closeLoopTime=0;
 	
@@ -44,6 +47,7 @@ public class Robot extends IterativeRobot {
         	oi = OI.getInstance();
         	//drive = DriveTrain.getInstance();
         	drive = DriveTrain.getInstance();
+        	pat = new Path();
         	CrashTracker.logRobotInit();
         	iteratorEnabled.register(drive.getLoop());
         	iteratorEnabled.register(sh.getLoop());
@@ -52,6 +56,17 @@ public class Robot extends IterativeRobot {
         	iteratorEnabled.register(vision.getLoop());
         	iteratorDisabled.register(new GyroCalibrator());
         	resetAllSensors();
+        	
+    		autoChoose = new SendableChooser<String>();
+    		autoChoose.addObject("POSITION CHOOSER", "0");
+    		autoChoose.addDefault("Do Nothing", "Do Nothing");
+    		autoChoose.addObject("Red Left", "Red Left");
+    		autoChoose.addObject("Red Middle", "Red Middle");
+    		autoChoose.addObject("Red Right", "Red Right");
+    		autoChoose.addObject("Blue Left", "Blue Left");
+    		autoChoose.addObject("Blue Middle", "Blue Middle");
+    		autoChoose.addObject("Blue Right", "Blue Right");
+    		SmartDashboard.putData("Auto mode", autoChoose);
         	//RobotMap.g.calibrate();
         	
         }catch(Throwable t){
@@ -87,6 +102,75 @@ public class Robot extends IterativeRobot {
         	CrashTracker.logAutoInit();
         	iteratorEnabled.start();
         	iteratorDisabled.stop();
+        	pat.reset();
+        	//The point of this is to drive partly to the peg, and then use vision tracking to correct itself,
+        	//since we can't expect the human to place it in the right place each time
+        	switch((String)autoChoose.getSelected()){
+        	case "Do Nothing":
+        		break;
+        	case "Red Left":
+        		pat.register(Path.PathType.Position, 86.94-14.5);
+        		pat.register(Path.PathType.Heading, -60.0);
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, ((76.234-14.5)/3.0)-0.5); //Just making sure it doesn't overshoot
+        		pat.Iterate();
+        		break;
+        	case "Red Middle":
+        		pat.register(Path.PathType.Position, 100.39/2.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (100.39/2.0)-0.5);
+        		break;
+        	case "Red Right":
+        		pat.register(Path.PathType.Position, 86.94-14.5);
+        		pat.register(Path.PathType.Heading, 60.0);
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, ((76.234-14.5)/3.0)-0.5);
+        		pat.Iterate();
+        		break;
+        	case "Blue Left":
+        		pat.register(Path.PathType.Position, 86.94-14.5);
+        		pat.register(Path.PathType.Heading, -60.0);
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, ((76.234-14.5)/3.0)-0.5);
+        		pat.Iterate();
+        		break;
+        	case "Blue Middle":
+        		pat.register(Path.PathType.Position, 100.39/2.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (100.39/2.0)-0.5);
+        		break;
+        	case "Blue Right":
+        		pat.register(Path.PathType.Position, 86.94-14.5);
+        		pat.register(Path.PathType.Heading, 60.0);
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        		pat.register(Path.PathType.Heading, vision.getCalculatedAngle());
+        		pat.register(Path.PathType.Position, ((76.234-14.5)/3.0)-0.5);
+        		pat.Iterate();
+        		break;
+        	default:
+        		break;
+        	}
         	
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
@@ -121,14 +205,14 @@ public class Robot extends IterativeRobot {
     public void teleopPeriodic() {
         try{
 			if(OI.rightStick.getRawButton(2)){
-				while(OI.rightStick.getRawButton(2)){}
 				if(RobotMap.gearShifter.get().equals(DoubleSolenoid.Value.kForward)){
 					RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
-					System.out.println("Reverse");
+					System.out.println("Low gear");
 				}else{
 					RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
-					System.out.println("Forward");
+					System.out.println("High gear");
 				}
+				while(OI.rightStick.getRawButton(2)){}
 				
 			}
         }catch(Throwable t){
@@ -157,13 +241,14 @@ public class Robot extends IterativeRobot {
     public void resetAllSensors(){
     	RobotMap.left1.setPosition(0);
     	RobotMap.right1.setPosition(0);
-    	//RobotMap.g.reset();
+    	RobotMap.spig.reset();
+    	RobotMap.navxGyro.reset();
     }
     public void writeAllToCSV(){
         RobotMap.writer.writeNext(drive.valString().split("#"), false);
     }
     /**
-     * This would be a valid time to make a CSVWriterFactory that uses an iterator variable to loop in the background, but I'm not enterprise enough to do that
+     * Create CSV file with timestamp for keeping track of values
      */
     public void createNewCSV(){
     	try{

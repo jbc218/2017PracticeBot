@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.usfirst.frc.team4910.subsystems.DriveTrain;
 import org.usfirst.frc.team4910.util.*;
 import com.ctre.*;
 import com.kauailabs.navx.frc.AHRS;
@@ -27,11 +28,12 @@ public class RobotMap {
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev=4096;
-	public static final double rightMinRPM=-480;
-	public static final double rightMaxRPM=480;
-	public static final double leftMinRPM=-480;
-	public static final double leftMaxRPM=480;
+	public static final double rightMinIPS=DriveTrain.rpmToInchesPerSecond(-480);
+	public static final double rightMaxIPS=DriveTrain.rpmToInchesPerSecond(480);
+	public static final double leftMinIPS=DriveTrain.rpmToInchesPerSecond(-480);
+	public static final double leftMaxIPS=DriveTrain.rpmToInchesPerSecond(480);
 	
+	//Position, velocity, and gyro PIDF values are all for low gear only
 	public static final double PositionKp=0.0;
 	public static final double PositionKi=0.0;
 	public static final double PositionKd=0.0;
@@ -44,6 +46,7 @@ public class RobotMap {
 	public static final double GyroKp=0.0;
 	public static final double GyroKi=0.0;
 	public static final double GyroKd=0.0;
+	
 	public static final double shooterKp=0.0;
 	public static final double shooterKd=0.0;
 	public static final double shooterKf=0.0;
@@ -57,19 +60,6 @@ public class RobotMap {
 	public static double VelocityRampRate=24.0;
 	
 	public static void init(){
-//		try{
-//			Calendar now = Calendar.getInstance();
-//			String str = String.valueOf(now.get(Calendar.MONTH))+"."+String.valueOf(now.get(Calendar.DAY_OF_MONTH))+"."
-//					+String.valueOf(now.get(Calendar.HOUR_OF_DAY))+"."+String.valueOf(now.get(Calendar.MINUTE))+"."+String.valueOf(now.get(Calendar.SECOND));
-//			
-//			writer = new CSVWriter(new FileWriter("TestingData"+str+".csv"), ',');
-//			String[] tabNames = ("Time#Left Error#Right Error#Left Position#Right Position#Left Velocity#Right Velocity#Left Setpoint"
-//					+ "#Right Setpoint#Weighted Left Error#Weighted Right Error#Weighted Left Position#Weighted Right Position"
-//					+ "#Weighted Left Velocity#Weighted Right Velocity#Weighted Left Setpoint#Weighted Right Setpoint#kP#kI#kD").split("#");
-//			writer.writeNext(tabNames, true);
-//		}catch(IOException e){
-//			e.printStackTrace();
-//		}
 		left1 = new CANTalon(4);
 		left2 = new CANTalon(3);
 		right1 = new CANTalon(2);
@@ -93,10 +83,10 @@ public class RobotMap {
         drivePositionRightPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);
         driveVelocityLeftPID = new SynchronousPID(VelocityKp,VelocityKi,VelocityKd,VelocityKf1);
         driveVelocityRightPID = new SynchronousPID(VelocityKp,VelocityKi,VelocityKd,VelocityKf2);
-        driveVelocityLeftPID.setOutputRange(-3200, 3200);
-        driveVelocityRightPID.setOutputRange(-3200, 3200);
+        driveVelocityLeftPID.setOutputRange(leftMinIPS, leftMaxIPS);
+        driveVelocityRightPID.setOutputRange(rightMinIPS, rightMaxIPS);
         driveGyroPID = new SynchronousPID(GyroKp, GyroKi, GyroKd);
-        shootPID = new SynchronousPID(shooterKp, 0.0, shooterKd, shooterKf);
+        shootPID = new SynchronousPID(shooterKp, 0.0, shooterKd, shooterKf); //If we have to use I, we're doing something wrong
         shootGuidePID = new SynchronousPID(shooterGuideKp, 0.0, shooterGuideKd, shooterGuideKf);
         left1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));

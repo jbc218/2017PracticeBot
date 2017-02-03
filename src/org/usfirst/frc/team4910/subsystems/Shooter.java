@@ -30,6 +30,8 @@ public class Shooter {
 			RobotMap.shootControl.set(0);
 			RobotMap.shootGuide.set(0);
 			currentState=ShooterState.Idle;
+			loadingStart=0;
+			shootingStart=0;
 		}
 
 		@Override

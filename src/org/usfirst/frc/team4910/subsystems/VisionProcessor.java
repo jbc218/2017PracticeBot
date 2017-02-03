@@ -17,6 +17,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.usfirst.frc.team4910.iterations.Iterate;
 import org.usfirst.frc.team4910.robot.OI;
+import org.usfirst.frc.team4910.robot.RobotMap;
 
 import edu.wpi.cscore.AxisCamera;
 import edu.wpi.cscore.CvSink;
@@ -56,6 +57,9 @@ public class VisionProcessor {
 	private static double yawAngleToTargetX(double error){return Math.toDegrees(Math.atan((error)/focalLengthX));}
 	private static double yawAngleToTargetY(double error){return Math.toDegrees(Math.atan((error)/focalLengthY));}
 	private static double DistanceToTarget(double error){return heightToPegCenter*focalLengthY/error;}
+	//tan(theta)=height/distance, tan(theta)=err/focalY, distance/height = focalY/err 
+	private static double DistanceToTargetApprox(double error){return heightToPegCenter/Math.tan(Math.toRadians(error*degPerPixelY));}
+	//distance=height/tan(theta)
 	private static VideoCapture videoCapture;
 	private static Mat BGR, HSV, blur, threshold, clusters, hierarchy;
 	private static boolean insideTarget = false;
@@ -66,6 +70,10 @@ public class VisionProcessor {
 	private static int iteration=0;
 	private static boolean hasEnabled=false;
 	private CameraServer camServer;
+	private static double currentAngle=0.0;
+	private static double currentDistance=0.0;
+	private static double calculatedAngle=0.0;
+	private static double calculatedDistance=0.0;
 	private enum VisionStates {
 			Disabled, PegTracking, BoilerTracking;
 	}
@@ -96,13 +104,12 @@ public class VisionProcessor {
 			case Disabled:
 				if(OI.leftStick.getRawButton(10)){
 					//no need to put a while loop, since next iteration it'll go to PegTracking
-					visionState=VisionStates.PegTracking;
 					startPegTracking();
 				}
 				break;
 			case PegTracking:
 				if(OI.leftStick.getRawButton(11)){
-					visionState=VisionStates.Disabled;
+					stopPegTracking();
 					break;
 				}
 				processPeg();
@@ -148,22 +155,26 @@ public class VisionProcessor {
 	public static VisionProcessor getInstance(){
 		return instance==null ? instance=new VisionProcessor() : instance;
 	}
-	private static void captureImage(){
-		
-	}
 	public synchronized void startPegTracking(){
+		visionState=VisionStates.PegTracking;
 		cvs.setEnabled(true);
 		hasEnabled=true;
 		cvs.grabFrame(BGR);
 		captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
+		currentAngle=RobotMap.spig.getAngle();
 		boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
 		System.out.println("Able to write image: "+ b);
 		insideTarget = false;
 	
 	}
+	public synchronized void stopPegTracking(){
+		visionState=VisionStates.Disabled;
+	}
 	private synchronized void processPeg(){
 		cvs.grabFrame(BGR);
 		captureTime=Timer.getFPGATimestamp();
+		currentAngle=RobotMap.spig.getAngle();
+		currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
 		iteration++;
 		ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 		if(!BGR.empty() && !insideTarget){
@@ -220,13 +231,18 @@ public class VisionProcessor {
 					
 				}//ends "iterate over contours" loop
 				Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
-				System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width));
+				System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width)); //I'm aligning to the center, if that wasn't obvious
 				System.out.println("Angle to target Y: "+yawAngleToTargetY(totalRect.y+.5*totalRect.height));
+				System.out.println("Ground distance to target: "+DistanceToTarget(totalRect.y+.5*totalRect.height));
+				calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
+				calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget(totalRect.y+.5*totalRect.height)-currentDistance;
 			}//ends "find contours" conditionals
 		
 		}//ends "is image even there" conditional
 	
 	}//end of processing
-	
+	public synchronized double getCalculatedAngle(){
+		return calculatedAngle;
+	}
 	
 }

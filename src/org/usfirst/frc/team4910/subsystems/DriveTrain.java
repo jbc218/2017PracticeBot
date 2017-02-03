@@ -147,8 +147,8 @@ public class DriveTrain {
 	private synchronized DriveControlState handleVelocity(){
 		if(headingMode){
 			double G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
-			RobotMap.driveVelocityLeftPID.setSetpoint(RobotMap.leftMaxRPM*(setpointLeft-G));
-			RobotMap.driveVelocityRightPID.setSetpoint(RobotMap.rightMaxRPM*(setpointRight-G));
+			RobotMap.driveVelocityLeftPID.setSetpoint(RobotMap.leftMaxIPS*(setpointLeft-G));
+			RobotMap.driveVelocityRightPID.setSetpoint(RobotMap.rightMaxIPS*(setpointRight-G));
 		}
 		drive(RobotMap.driveVelocityLeftPID.calculate(rpmToInchesPerSecond(RobotMap.left1.getSpeed())),
 				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(RobotMap.right1.getSpeed())));
@@ -299,7 +299,7 @@ public class DriveTrain {
     }
     /**
      * Safe way of calling every single element of the map without incomplete blocks and overall ease
-     * @return list of all v in <k, v> with the delimiter "#"
+     * @return list of all v in (k, v) with the delimiter "#"
      */
 	public synchronized String valString(){
     	synchronized(map){
