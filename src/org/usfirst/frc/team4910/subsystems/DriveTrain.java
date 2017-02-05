@@ -248,28 +248,28 @@ public class DriveTrain {
         SmartDashboard.putNumber("heading error", setpointHeading-RobotMap.spig.getAngle());
         SmartDashboard.putNumber("battery voltage", DriverStation.getInstance().getBatteryVoltage());
         
-        boolean collisionDetected = false;
-        
-        double curr_world_linear_accel_x = RobotMap.navxGyro.getWorldLinearAccelX();
-        double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
-        last_world_linear_accel_x = curr_world_linear_accel_x;
-        double curr_world_linear_accel_y = RobotMap.navxGyro.getWorldLinearAccelY();
-        double currentJerkY = curr_world_linear_accel_y - last_world_linear_accel_y;
-        last_world_linear_accel_y = curr_world_linear_accel_y;
-        
-        if ( ( Math.abs(currentJerkX) > .7f ) ||
-             ( Math.abs(currentJerkY) > .7f) ) { //.5f is the collision threshold
-            collisionDetected = true;
-        }
-        
-        SmartDashboard.putBoolean("Has collided", collisionDetected);
-        SmartDashboard.putBoolean("NAVX Connected", RobotMap.navxGyro.isConnected());
-        SmartDashboard.putBoolean("NAVX Calibrating", RobotMap.navxGyro.isCalibrating());
-        SmartDashboard.putBoolean("NAVX Moving Detected", RobotMap.navxGyro.isMoving());
-        SmartDashboard.putBoolean("NAVX Rotation detected", RobotMap.navxGyro.isRotating());
-        SmartDashboard.putString("NAVX Firmware Version", RobotMap.navxGyro.getFirmwareVersion());
-        SmartDashboard.putNumber("NAVX Pressure", RobotMap.navxGyro.getPressure());
-        SmartDashboard.putNumber("NAVX Barometric Pressure", RobotMap.navxGyro.getBarometricPressure());
+//        boolean collisionDetected = false;
+//        
+//        double curr_world_linear_accel_x = RobotMap.navxGyro.getWorldLinearAccelX();
+//        double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
+//        last_world_linear_accel_x = curr_world_linear_accel_x;
+//        double curr_world_linear_accel_y = RobotMap.navxGyro.getWorldLinearAccelY();
+//        double currentJerkY = curr_world_linear_accel_y - last_world_linear_accel_y;
+//        last_world_linear_accel_y = curr_world_linear_accel_y;
+//        
+//        if ( ( Math.abs(currentJerkX) > .7f ) ||
+//             ( Math.abs(currentJerkY) > .7f) ) { //.5f is the collision threshold
+//            collisionDetected = true;
+//        }
+//        
+//        SmartDashboard.putBoolean("Has collided", collisionDetected);
+//        SmartDashboard.putBoolean("NAVX Connected", RobotMap.navxGyro.isConnected());
+//        SmartDashboard.putBoolean("NAVX Calibrating", RobotMap.navxGyro.isCalibrating());
+//        SmartDashboard.putBoolean("NAVX Moving Detected", RobotMap.navxGyro.isMoving());
+//        SmartDashboard.putBoolean("NAVX Rotation detected", RobotMap.navxGyro.isRotating());
+//        SmartDashboard.putString("NAVX Firmware Version", RobotMap.navxGyro.getFirmwareVersion());
+//        SmartDashboard.putNumber("NAVX Pressure", RobotMap.navxGyro.getPressure());
+//        SmartDashboard.putNumber("NAVX Barometric Pressure", RobotMap.navxGyro.getBarometricPressure());
            
 	}
 	public DriveControlState getCurrentState(){
@@ -414,37 +414,37 @@ public class DriveTrain {
 	    	map.put("ErrorSumGyro", accumG);
 	    	map.put("IZone", IZone);
 	    	map.put("kGIZone", SmartDashboard.getNumber("kGIZone", 8.0));
-	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
-	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
-	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());
-	    	map.put("NAVXCompass", (double)RobotMap.navxGyro.getCompassHeading());
-	    	map.put("NAVXFullHeading", (double)RobotMap.navxGyro.getFusedHeading());
-	    	map.put("NAVXTotalYaw", (double)RobotMap.navxGyro.getAngle());
-	    	map.put("NAVXYawRate", (double)RobotMap.navxGyro.getRate());
-	    	map.put("NAVXAccelX", (double)RobotMap.navxGyro.getWorldLinearAccelX());
-	    	map.put("NAVXAccelY", (double)RobotMap.navxGyro.getWorldLinearAccelY());
-	    	map.put("NAVXAccelZ", (double)RobotMap.navxGyro.getWorldLinearAccelZ());
-	    	map.put("NAVXVelocityX", (double)RobotMap.navxGyro.getVelocityX());
-	    	map.put("NAVXVelocityY", (double)RobotMap.navxGyro.getVelocityY());
-	    	map.put("NAVXVelocityZ", (double)RobotMap.navxGyro.getVelocityZ());
-	    	map.put("NAVXDisplacementX", (double)RobotMap.navxGyro.getDisplacementX());
-	    	map.put("NAVXDisplacementY", (double)RobotMap.navxGyro.getDisplacementY());
-	    	map.put("NAVXDisplacementZ", (double)RobotMap.navxGyro.getDisplacementZ());
-	    	map.put("NAVXRawGyroX", (double)RobotMap.navxGyro.getRawGyroX());
-	    	map.put("NAVXRawGyroY", (double)RobotMap.navxGyro.getRawGyroY());
-	    	map.put("NAVXRawGyroZ", (double)RobotMap.navxGyro.getRawGyroZ());
-	    	map.put("NAVXRawAccelX", (double)RobotMap.navxGyro.getRawAccelX());
-	    	map.put("NAVXRawAccelY", (double)RobotMap.navxGyro.getRawAccelY());
-	    	map.put("NAVXRawAccelZ", (double)RobotMap.navxGyro.getRawAccelZ());
-	    	map.put("NAVXRawMagX", (double)RobotMap.navxGyro.getRawMagX());
-	    	map.put("NAVXRawMagY", (double)RobotMap.navxGyro.getRawMagY());
-	    	map.put("NAVXRawMagZ", (double)RobotMap.navxGyro.getRawMagZ());
-	    	map.put("NAVXTemp", (double)RobotMap.navxGyro.getTempC());
-	    	map.put("NAVXTimestamp", (double)RobotMap.navxGyro.getLastSensorTimestamp());
-	    	map.put("NAVXQuaternionX", (double)RobotMap.navxGyro.getQuaternionX());
-	    	map.put("NAVXQuaternionY", (double)RobotMap.navxGyro.getQuaternionY());
-	    	map.put("NAVXQuaternionZ", (double)RobotMap.navxGyro.getQuaternionZ());
-	    	map.put("NAVXQuaternionW", (double)RobotMap.navxGyro.getQuaternionW());
+//	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
+//	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
+//	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());
+//	    	map.put("NAVXCompass", (double)RobotMap.navxGyro.getCompassHeading());
+//	    	map.put("NAVXFullHeading", (double)RobotMap.navxGyro.getFusedHeading());
+//	    	map.put("NAVXTotalYaw", (double)RobotMap.navxGyro.getAngle());
+//	    	map.put("NAVXYawRate", (double)RobotMap.navxGyro.getRate());
+//	    	map.put("NAVXAccelX", (double)RobotMap.navxGyro.getWorldLinearAccelX());
+//	    	map.put("NAVXAccelY", (double)RobotMap.navxGyro.getWorldLinearAccelY());
+//	    	map.put("NAVXAccelZ", (double)RobotMap.navxGyro.getWorldLinearAccelZ());
+//	    	map.put("NAVXVelocityX", (double)RobotMap.navxGyro.getVelocityX());
+//	    	map.put("NAVXVelocityY", (double)RobotMap.navxGyro.getVelocityY());
+//	    	map.put("NAVXVelocityZ", (double)RobotMap.navxGyro.getVelocityZ());
+//	    	map.put("NAVXDisplacementX", (double)RobotMap.navxGyro.getDisplacementX());
+//	    	map.put("NAVXDisplacementY", (double)RobotMap.navxGyro.getDisplacementY());
+//	    	map.put("NAVXDisplacementZ", (double)RobotMap.navxGyro.getDisplacementZ());
+//	    	map.put("NAVXRawGyroX", (double)RobotMap.navxGyro.getRawGyroX());
+//	    	map.put("NAVXRawGyroY", (double)RobotMap.navxGyro.getRawGyroY());
+//	    	map.put("NAVXRawGyroZ", (double)RobotMap.navxGyro.getRawGyroZ());
+//	    	map.put("NAVXRawAccelX", (double)RobotMap.navxGyro.getRawAccelX());
+//	    	map.put("NAVXRawAccelY", (double)RobotMap.navxGyro.getRawAccelY());
+//	    	map.put("NAVXRawAccelZ", (double)RobotMap.navxGyro.getRawAccelZ());
+//	    	map.put("NAVXRawMagX", (double)RobotMap.navxGyro.getRawMagX());
+//	    	map.put("NAVXRawMagY", (double)RobotMap.navxGyro.getRawMagY());
+//	    	map.put("NAVXRawMagZ", (double)RobotMap.navxGyro.getRawMagZ());
+//	    	map.put("NAVXTemp", (double)RobotMap.navxGyro.getTempC());
+//	    	map.put("NAVXTimestamp", (double)RobotMap.navxGyro.getLastSensorTimestamp());
+//	    	map.put("NAVXQuaternionX", (double)RobotMap.navxGyro.getQuaternionX());
+//	    	map.put("NAVXQuaternionY", (double)RobotMap.navxGyro.getQuaternionY());
+//	    	map.put("NAVXQuaternionZ", (double)RobotMap.navxGyro.getQuaternionZ());
+//	    	map.put("NAVXQuaternionW", (double)RobotMap.navxGyro.getQuaternionW());
 		}
 	}
 	public synchronized Map<String, Double> getValueTable(){

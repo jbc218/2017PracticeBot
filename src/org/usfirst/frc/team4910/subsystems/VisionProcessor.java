@@ -49,6 +49,34 @@ public class VisionProcessor {
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
 	private static final double heightToPegCenter = 13.25; //In inches
 	private static final double minPegContourArea=35;
+	
+	private static final double heightToGoalCenter=0.0; //distance in inches to the center of the tapes
+	private static final double goalCamFromCenterX=0.0; //from a top view, the base of the triangle from camera position to robot center
+	private static final double goalCamFromCenterY=0.0; //height of that same triangle
+	/**
+	 * 
+	 * @param cD calculated distance in inches
+	 * @param t Angle in degrees. Use angle calculated from yawAngleToTargetX()
+	 * @return transitional distance
+	 */
+	private static double goalTransitionalDistance(double cD, double t){
+		double X=cD*Math.sin(Math.toRadians(t));
+		double Y=cD*Math.cos(Math.toRadians(t));
+		double ans=Math.sqrt((X+goalCamFromCenterX)*(X+goalCamFromCenterX)+(Y+goalCamFromCenterY)*(Y+goalCamFromCenterY));
+		return ans;
+	}
+	/**
+	 * 
+	 * @param cD calculated distance in inches
+	 * @param t Angle in degrees. Use angle calculated from yawAngleToTargetX()
+	 * @return transitional angle in degrees
+	 */
+	private static double goalTransitionalAngle(double cD, double t){
+		double X=cD*Math.sin(Math.toRadians(t));
+		double Y=cD*Math.cos(Math.toRadians(t));
+		return Math.toDegrees(Math.atan((X+goalCamFromCenterX)/(Y+goalCamFromCenterY)));
+	}
+	
 	private static HashMap<String, VideoProperty> propertyMap = new HashMap<String, VideoProperty>();
 	private static double yawAngleToTargetApproxX(double error){return (error)*degPerPixelX;}
 	private static double yawAngleToTargetApproxY(double error){return (error)*degPerPixelY;}

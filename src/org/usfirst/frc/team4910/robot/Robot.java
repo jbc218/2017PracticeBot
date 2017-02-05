@@ -191,10 +191,12 @@ public class Robot extends IterativeRobot {
         try{
         	resetAllSensors();
         	CrashTracker.logTeleopInit();
+        	drive.updatePID();
         	iteratorEnabled.start();
         	iteratorDisabled.stop();
         	System.out.println("Testing");
         	closeLoopTime=0;
+        	drive.disableHeadingMode();
         	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
@@ -215,6 +217,47 @@ public class Robot extends IterativeRobot {
 				while(OI.rightStick.getRawButton(2)){}
 				
 			}
+        	if(OI.leftStick.getRawButton(6) && !tunePID){
+        		while(OI.leftStick.getRawButton(6)){}
+        		createNewCSV();
+        		drive.setControlState(DriveControlState.regular);
+        		drive.setHeadingSetpoint(60.0);
+        		//drive.setSetpoints(0, 0);
+        		closeLoopTime=Timer.getFPGATimestamp();
+        		tunePID=true;
+        	}
+        	if((OI.leftStick.getRawButton(4) || (RobotMap.drivePositionLeftPID.onTarget() && RobotMap.drivePositionRightPID.onTarget() && Timer.getFPGATimestamp()-closeLoopTime>1.2)) && tunePID){
+        		tunePID=false;
+        		drive.setControlState(DriveControlState.regular);
+        		try{
+        			RobotMap.writer.close();
+        		}catch(IOException e){
+        			e.printStackTrace();
+        		}
+        	}
+        	if((drive.hasIterated || drive.isInHeadingMode()) && tunePID){
+        		
+        		
+            	if((OI.leftStick.getRawButton(1) || OI.rightStick.getRawButton(1)) && !drive.isInHeadingMode()){
+            		while(OI.leftStick.getRawButton(1)){
+            			
+            		}
+            		double leftGain, rightGain;
+            		leftGain = Math.abs(OI.leftStick.getY())<.15 ? 0 : -OI.leftStick.getY();
+            		//rightGain = Math.abs(OI.rightStick.getY())<.15 ? 0 : OI.rightStick.getY();
+            		rightGain=leftGain;
+            		//drive.setSetpoints(RobotMap.EncCountsPerRev*32*OI.leftStick.getY(), RobotMap.EncCountsPerRev*32*OI.rightStick.getY());
+            		drive.setSetpoints(leftGain*30.0, rightGain*30.0);
+            	}
+            	
+        		//drive.setSetpoints(OI.leftStick.getY()*1000.0, OI.rightStick.getY()*1000.0);
+        		//drive.setSetpoints(RobotMap.EncCountsPerRev*8*OI.leftStick.getY(), RobotMap.EncCountsPerRev*8*OI.rightStick.getY());
+        		drive.updatePID();
+        		
+        		if(closeLoopTime!=0) writeAllToCSV();
+        		
+        	}
+			
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
         	throw t;
