@@ -127,8 +127,8 @@ public class DriveTrain {
 		}
 	}
 	private synchronized DriveControlState handlePosition(){
-		drive(RobotMap.drivePositionLeftPID.calculate(countsToInches(-RobotMap.left1.getEncPosition())), 
-				RobotMap.drivePositionRightPID.calculate(countsToInches(RobotMap.right1.getEncPosition())));
+		drive(RobotMap.drivePositionLeftPID.calculate(countsToInches(RobotMap.left1.getEncPosition())), 
+				RobotMap.drivePositionRightPID.calculate(countsToInches(-RobotMap.right1.getEncPosition())));
 		switch(wantedState){
 		case regular:
 			resetAll();
@@ -151,7 +151,7 @@ public class DriveTrain {
 			RobotMap.driveVelocityRightPID.setSetpoint(RobotMap.rightMaxIPS*(setpointRight-G));
 		}
 		drive(RobotMap.driveVelocityLeftPID.calculate(rpmToInchesPerSecond(RobotMap.left1.getSpeed())),
-				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(RobotMap.right1.getSpeed())));
+				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(-RobotMap.right1.getSpeed())));
 		switch(wantedState){
 		case regular:
 			resetAll();
@@ -212,17 +212,17 @@ public class DriveTrain {
 		return new double[]{setpointLeft,setpointRight};
 	}
 	private synchronized void drive(double left, double right){
-		leftOut=left;
-		rightOut=-right;
-        if ( Math.abs(left) < .15 && !headingMode && currentState==DriveControlState.regular) {
+		leftOut=-left;
+		rightOut=right;
+        if ( Math.abs(left) < .075 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.left1.set(0);
         }else{
-        	RobotMap.left1.set(left);
+        	RobotMap.left1.set(-left);
         }
-        if ( Math.abs(right) < .15 && !headingMode && currentState==DriveControlState.regular) {
+        if ( Math.abs(right) < .075 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.right1.set(0);
         }else{
-        	RobotMap.right1.set(-right);
+        	RobotMap.right1.set(right);
         }
 	}
 	public synchronized void resetAll(){

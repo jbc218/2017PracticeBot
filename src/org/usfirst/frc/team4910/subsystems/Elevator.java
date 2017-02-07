@@ -11,7 +11,7 @@ import org.usfirst.frc.team4910.robot.RobotMap;
  * at the choice of the operator.
  */
 public class Elevator {
-	private Elevator instance;
+	private static Elevator instance;
 	private enum ElevatorState{
 		Disabled, Running;
 	}
@@ -67,7 +67,7 @@ public class Elevator {
 	private Elevator(){
 		
 	}
-	public Elevator getInstance(){
+	public static Elevator getInstance(){
 		return instance==null ? instance=new Elevator() : instance;
 	}
 	private synchronized void RunElevator(){

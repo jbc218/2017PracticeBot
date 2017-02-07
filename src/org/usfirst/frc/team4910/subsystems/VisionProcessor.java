@@ -175,7 +175,7 @@ public class VisionProcessor {
 		clusters = new Mat();
 		hierarchy = new Mat();
 		camServer = CameraServer.getInstance();
-		axiscam = camServer.addAxisCamera("10.49.10.44");
+		axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
 		cvs = camServer.getVideo(axiscam);
 
 		

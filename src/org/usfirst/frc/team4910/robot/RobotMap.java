@@ -22,7 +22,6 @@ public class RobotMap {
 	public static SynchronousPID drivePositionLeftPID,drivePositionRightPID,driveVelocityLeftPID,driveVelocityRightPID;
 	public static SynchronousPID driveGyroPID;
 	public static SynchronousPID shootPID, shootGuidePID; //both should be a simple PD+F loop
-	public static AHRS navxGyro;
 	public static GyroHelper spig;
 	public static CSVWriter writer;
 	
@@ -57,15 +56,20 @@ public class RobotMap {
 	public static final double shooterGuideOptimalTime=0.0;
 	public static final double shooterSpinupTime=0.0;
 	public static final double shooterTimeToShoot=0.0;
-	public static double VelocityRampRate=24.0;
+	public static final double VelocityRampRate=24.0;
 	
 	public static void init(){
-		left1 = new CANTalon(4);
-		left2 = new CANTalon(3);
-		right1 = new CANTalon(2);
-		right2 = new CANTalon(1);
+		left1 = new CANTalon(1);
+		left2 = new CANTalon(2);
+		right1 = new CANTalon(3);
+		right2 = new CANTalon(4);
+		elevControl = new CANTalon(5);
+		climbControl = new CANTalon(6);
+		shootGuide = new CANTalon(7);
+		shootControl = new CANTalon(8);
+
+		gearShifter = new DoubleSolenoid(4,5);
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
-		navxGyro = new AHRS(SPI.Port.kMXP);
 		left1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
 		right1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
         left1.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
@@ -76,9 +80,8 @@ public class RobotMap {
         right1.set(0);
         right2.changeControlMode(CANTalon.TalonControlMode.Follower);
         right2.set(right1.getDeviceID());
-        gearShifter = new DoubleSolenoid(0,1);
-        c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match
-        c.start();
+        c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match    
+        c.setClosedLoopControl(false);
         drivePositionLeftPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);
         drivePositionRightPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);
         driveVelocityLeftPID = new SynchronousPID(VelocityKp,VelocityKi,VelocityKd,VelocityKf1);

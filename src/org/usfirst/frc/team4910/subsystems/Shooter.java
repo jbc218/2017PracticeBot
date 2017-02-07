@@ -16,7 +16,7 @@ import edu.wpi.first.wpilibj.Timer;
  */
 public class Shooter {
 
-	private Shooter instance;
+	private static Shooter instance;
 	private enum ShooterState{
 		Idle, Loading, Shooting;
 	}
@@ -82,7 +82,7 @@ public class Shooter {
 	private Shooter(){
 		
 	}
-	public Shooter getInstance(){
+	public static Shooter getInstance(){
 		return instance==null ? instance=new Shooter() : instance;
 	}
 	private void load(){
