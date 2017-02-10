@@ -29,22 +29,25 @@ public class Elevator {
 			synchronized(Elevator.this){
 				switch(currentState){
 				case Disabled:
+					currentState=ElevatorState.Disabled;
+					RobotMap.elevControl.set(0);
 					if(OI.thirdStick.getRawButton(2)){
 						while(OI.thirdStick.getRawButton(2)){
 							RunElevator();
 						}
 						currentState=ElevatorState.Running;
 					}
-					currentState=ElevatorState.Disabled;
 					break;
 				case Running:
+					currentState=ElevatorState.Running;
+					RunElevator();
 					if(OI.thirdStick.getRawButton(2)){
 						while(OI.thirdStick.getRawButton(2)){
 							RobotMap.elevControl.set(0);
 						}
 						currentState=ElevatorState.Disabled;
 					}
-					currentState=ElevatorState.Running;
+					
 					break;
 				default:
 					currentState=ElevatorState.Disabled;
@@ -71,10 +74,10 @@ public class Elevator {
 		return instance==null ? instance=new Elevator() : instance;
 	}
 	private synchronized void RunElevator(){
-		// o = (b+f) - x
+		// o = (b+f) + x
 		// o is output, b is the maximum possible motor average, f is the minimum elevator speed
 		// x is the average of the two drive motor outputs
-		RobotMap.elevControl.set(1.25-((RobotMap.left1.get()+RobotMap.right1.get())/2.0));
+		RobotMap.elevControl.set(.5+Math.abs((RobotMap.left1.get()+RobotMap.right1.get())/2.0));
 		
 	}
 }

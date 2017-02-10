@@ -127,6 +127,7 @@ public class SynchronousPID {
         } else if (m_result < m_minimumOutput) {
             m_result = m_minimumOutput;
         }
+        //Timer.delay(.05);
         return m_outputDirection*m_result;
     }
 

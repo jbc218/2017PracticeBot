@@ -24,6 +24,7 @@ public class RobotMap {
 	public static SynchronousPID shootPID, shootGuidePID; //both should be a simple PD+F loop
 	public static GyroHelper spig;
 	public static CSVWriter writer;
+	public static BuiltInAccelerometer RIOAccel;
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev=4096;
@@ -33,7 +34,7 @@ public class RobotMap {
 	public static final double leftMaxIPS=DriveTrain.rpmToInchesPerSecond(480);
 	
 	//Position, velocity, and gyro PIDF values are all for low gear only
-	public static final double PositionKp=0.0;
+	public static final double PositionKp=0.015;
 	public static final double PositionKi=0.0;
 	public static final double PositionKd=0.0;
 	public static final double PositionKf=0.0;
@@ -42,7 +43,7 @@ public class RobotMap {
 	public static final double VelocityKd=0.0;
 	public static final double VelocityKf1=0.0;
 	public static final double VelocityKf2=0.0;
-	public static final double GyroKp=0.0;
+	public static final double GyroKp=0.009;
 	public static final double GyroKi=0.0;
 	public static final double GyroKd=0.0;
 	
@@ -53,9 +54,9 @@ public class RobotMap {
 	public static final double shooterGuideKd=0.0;
 	public static final double shooterGuideKf=0.0;
 	public static final double shooterGuideOptimalSpeed=0.0;
-	public static final double shooterGuideOptimalTime=0.0;
-	public static final double shooterSpinupTime=0.0;
-	public static final double shooterTimeToShoot=0.0;
+	public static final double shooterGuideOptimalTime=0.5;
+	public static final double shooterSpinupTime=2.0;
+	public static final double shooterTimeToShoot=60.0;
 	public static final double VelocityRampRate=24.0;
 	
 	public static void init(){
@@ -70,6 +71,7 @@ public class RobotMap {
 
 		gearShifter = new DoubleSolenoid(4,5);
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
+		RIOAccel = new BuiltInAccelerometer();
 		left1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
 		right1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
         left1.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
@@ -80,6 +82,8 @@ public class RobotMap {
         right1.set(0);
         right2.changeControlMode(CANTalon.TalonControlMode.Follower);
         right2.set(right1.getDeviceID());
+        shootControl.setVoltageRampRate(24);
+        shootControl.setEncPosition(0);
         c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match    
         c.setClosedLoopControl(false);
         drivePositionLeftPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);

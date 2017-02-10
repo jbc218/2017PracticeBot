@@ -1,5 +1,6 @@
 package org.usfirst.frc.team4910.subsystems;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -16,6 +17,11 @@ import org.usfirst.frc.team4910.util.SynchronousPID;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import jaci.pathfinder.Pathfinder;
+import jaci.pathfinder.Trajectory;
+import jaci.pathfinder.Waypoint;
+import jaci.pathfinder.followers.EncoderFollower;
+import jaci.pathfinder.modifiers.TankModifier;
 
 public class DriveTrain {
 	
@@ -38,6 +44,20 @@ public class DriveTrain {
 	private Map<String, Double> map = Collections.synchronizedMap(new HashMap<String, Double>());
 	private Set<Map.Entry<String, Double>> Values = map.entrySet();
 	private double currentStateStartTime=0.0;
+	private double maxAccel=4.708244561906604; //m/s/s
+	private double maxJerk=2.00025175417449; //m/s/s/s
+	private double maxVelocity=0.07436226410167242; //m/s
+	//TODO: test out trajectory, calculate max acceleration and max jerk
+	private Trajectory.Config conf = new Trajectory.Config(Trajectory.FitMethod.HERMITE_CUBIC, Trajectory.Config.SAMPLES_HIGH, .02, maxVelocity, maxAccel , maxJerk );
+	private Waypoint[] points;
+	private TankModifier modifier;
+	private Trajectory leftTrajectory;
+	private Trajectory rightTrajectory;
+	private Trajectory trajectory;
+	private EncoderFollower leftEF, rightEF;
+	private double leftTrajectoryOutput=0.0, rightTrajectoryOutput=0.0;
+	private boolean trajectoryMode=false;
+	private boolean reverse=false;
 	private final Iterate iter = new Iterate(){
         private boolean stateChanged;
         
@@ -52,6 +72,27 @@ public class DriveTrain {
 		@Override
 		public void exec() {
 			synchronized(DriveTrain.this){
+				if(OI.leftStick.getRawButton(2)){
+					while(OI.leftStick.getRawButton(2));
+					reverse=!reverse;
+				}
+				double curr_world_linear_accel_x = RobotMap.RIOAccel.getX();
+	        	double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
+		    	last_world_linear_accel_x = curr_world_linear_accel_x;
+		    	double curr_world_linear_accel_y = RobotMap.RIOAccel.getY();
+		    	double currentJerkY = curr_world_linear_accel_y - last_world_linear_accel_y;
+		    	last_world_linear_accel_y = curr_world_linear_accel_y;
+		    	double jerkXY = Math.sqrt(currentJerkX*currentJerkX+currentJerkY*currentJerkY); //net jerk in XY plane
+		    	double accelXY = Math.sqrt(curr_world_linear_accel_x*curr_world_linear_accel_x+curr_world_linear_accel_y*curr_world_linear_accel_y);
+		    	maxAccel = Math.max(maxAccel, accelXY);
+		    	maxJerk = Math.max(maxJerk, jerkXY);
+		    	maxVelocity = Math.max(maxVelocity, Math.sqrt(
+		    			0.0254*rpmToInchesPerSecond(RobotMap.left1.getSpeed())*0.0254*rpmToInchesPerSecond(RobotMap.left1.getSpeed())
+		    		   + 0.0254*rpmToInchesPerSecond(RobotMap.right1.getSpeed())*0.0254*rpmToInchesPerSecond(RobotMap.right1.getSpeed()) ));
+		    	SmartDashboard.putNumber("InternalAccelX", curr_world_linear_accel_x);
+		    	SmartDashboard.putNumber("InternalAccelY", curr_world_linear_accel_y);
+		    	SmartDashboard.putNumber("InternalJerkX", currentJerkX);
+		    	SmartDashboard.putNumber("InternalJerkY", currentJerkY);
 				DriveControlState newState;
 				double now = Timer.getFPGATimestamp();
 				switch(currentState){
@@ -84,6 +125,7 @@ public class DriveTrain {
 
 		@Override
 		public void end() {
+			System.out.println("Max velocity: "+maxVelocity+"\nMax accel: "+maxAccel+"\nMax jerk: "+maxJerk);
 			resetAll();
 		}
 		
@@ -106,6 +148,8 @@ public class DriveTrain {
 	private synchronized DriveControlState handleRegular(){
 		setpointLeft=-OI.leftStick.getY();
 		setpointRight=-OI.rightStick.getY();
+		setpointLeft = reverse ? OI.rightStick.getY() : setpointLeft;
+		setpointRight = reverse ? OI.leftStick.getY() : setpointRight;
 		double G=0.0;
 		if(headingMode){
 			G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
@@ -127,8 +171,18 @@ public class DriveTrain {
 		}
 	}
 	private synchronized DriveControlState handlePosition(){
-		drive(RobotMap.drivePositionLeftPID.calculate(countsToInches(RobotMap.left1.getEncPosition())), 
-				RobotMap.drivePositionRightPID.calculate(countsToInches(-RobotMap.right1.getEncPosition())));
+		drive(RobotMap.drivePositionLeftPID.calculate(countsToInches(-RobotMap.left1.getEncPosition())), 
+				RobotMap.drivePositionRightPID.calculate(countsToInches(RobotMap.right1.getEncPosition())));
+//		if(trajectoryMode){
+//			double dAngle = Pathfinder.boundHalfDegrees(Pathfinder.r2d(leftEF.getHeading())-RobotMap.spig.getAngle());
+//			double turn = 0.8*(-1/80.0)*dAngle;
+//			double lc=leftEF.calculate(-RobotMap.left1.getEncPosition());
+//			double rc=rightEF.calculate(RobotMap.right1.getEncPosition());
+//			leftTrajectoryOutput = lc+turn;
+//			rightTrajectoryOutput = rc-turn;
+//			SmartDashboard.putNumber("Left Trajectory Output", leftTrajectoryOutput);
+//			SmartDashboard.putNumber("Right Trajectory Output", rightTrajectoryOutput);
+//		}
 		switch(wantedState){
 		case regular:
 			resetAll();
@@ -196,6 +250,20 @@ public class DriveTrain {
 			RobotMap.drivePositionRightPID.setSetpoint(setpointRight);
 			RobotMap.drivePositionLeftPID.resetIntegrator();
 			RobotMap.drivePositionRightPID.resetIntegrator();
+//			points = new Waypoint[]{new Waypoint(0,0,0),new Waypoint(left*0.0254, right*0.0254,0)};
+//			trajectory = Pathfinder.generate(points, conf);
+//			modifier = new TankModifier(trajectory).modify(25.375*0.0254);
+//			leftTrajectory = modifier.getLeftTrajectory();
+//			rightTrajectory = modifier.getRightTrajectory();
+//			leftEF = new EncoderFollower(leftTrajectory);
+//			rightEF = new EncoderFollower(rightTrajectory);
+//			leftEF.configureEncoder(RobotMap.left1.getEncPosition(), (int) RobotMap.EncCountsPerRev, 0.0254*RobotMap.DriveWheelDiameter);
+//			rightEF.configureEncoder(RobotMap.right1.getEncPosition(), (int) RobotMap.EncCountsPerRev, 0.0254*RobotMap.DriveWheelDiameter);
+//			leftEF.configurePIDVA(RobotMap.drivePositionLeftPID.getP(), RobotMap.drivePositionLeftPID.getI(), RobotMap.drivePositionLeftPID.getD(), 1/maxVelocity, maxAccel/2);
+//			rightEF.configurePIDVA(RobotMap.drivePositionRightPID.getP(), RobotMap.drivePositionRightPID.getI(), RobotMap.drivePositionRightPID.getD(), 1/maxVelocity, maxAccel/2);
+//			Pathfinder.writeToCSV(new File("/home/lvuser/LeftTrajectory.csv"), leftTrajectory);
+//			Pathfinder.writeToCSV(new File("/home/lvuser/RightTrajectory.csv"), rightTrajectory);
+//			trajectoryMode=true;
 		}
 	}
 	public synchronized void setHeadingSetpoint(double set){
@@ -414,6 +482,11 @@ public class DriveTrain {
 	    	map.put("ErrorSumGyro", accumG);
 	    	map.put("IZone", IZone);
 	    	map.put("kGIZone", SmartDashboard.getNumber("kGIZone", 8.0));
+	    	map.put("ShooterPosition", (double)RobotMap.shootControl.getEncPosition());
+	    	map.put("ShooterSpeed", 600.0*(RobotMap.shootControl.getEncVelocity()/80.0)); //4333.3
+	    	map.put("ShootKp", SmartDashboard.getNumber("ShootKp", 0.0));
+	    	map.put("ShootSetpoint", (2600.0*OI.thirdStick.getY()));
+	    	map.put("ShootError", (2600.0*OI.thirdStick.getY())-600.0*(RobotMap.shootControl.getEncVelocity()/80.0));
 //	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
 //	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
 //	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());

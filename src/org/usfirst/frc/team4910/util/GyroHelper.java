@@ -8,6 +8,8 @@ import edu.wpi.first.wpilibj.GyroBase;
 import edu.wpi.first.wpilibj.PIDSource;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.hal.HAL;
+import edu.wpi.first.wpilibj.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.wpilibj.interfaces.Gyro;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
@@ -70,6 +72,8 @@ public class GyroHelper extends GyroBase implements Gyro, PIDSource, LiveWindowS
         m_spi.initAccumulator(kSamplePeriod, 0x20000000, 4, 0x0c00000E, 0x04000000, 10, 16, true, true);
 
         calibrate();
+        HAL.report(tResourceType.kResourceType_ADXRS450, port.value);
+        LiveWindow.addSensor("ADXRS450_Gyro", port.value, this);
     }
 
     /**

@@ -30,7 +30,7 @@ public class Robot extends IterativeRobot {
 	Iterator iteratorEnabled = new Iterator();
 	Iterator iteratorDisabled = new Iterator(); //to do functions while idle, implement later
 	public static DriveTrain drive;
-	static Shooter sh;
+	public static Shooter sh;
 	static Elevator elev;
 	static VisionProcessor vision;
 	static OI oi;
@@ -217,6 +217,12 @@ public class Robot extends IterativeRobot {
 				while(OI.rightStick.getRawButton(2)){}
 				
 			}
+        	if(OI.leftStick.getRawButton(12)){
+        		//pat.register(Path.PathType.Position, 86.94-14.5);
+        		pat.register(Path.PathType.Heading, 60.0);
+        		//pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
+        		pat.Iterate();
+        	}
 			if(OI.rightStick.getRawButton(11)){
 				while(OI.rightStick.getRawButton(11)){}
 				if(RobotMap.c.enabled()){
@@ -231,6 +237,7 @@ public class Robot extends IterativeRobot {
         		closeLoopTime=Timer.getFPGATimestamp();
         		createNewCSV(); //this MUST go before the next line
         		tunePID=true;
+        		drive.setControlState(DriveControlState.position);
         		while(OI.leftStick.getRawButton(3)){
         			
         		}
@@ -249,7 +256,7 @@ public class Robot extends IterativeRobot {
 //        		System.out.println(RobotMap.drivePositionLeftPID.getError());
         	}
         	if((OI.leftStick.getRawButton(4) || (RobotMap.drivePositionLeftPID.onTarget() && RobotMap.drivePositionRightPID.onTarget()
-        			&& Timer.getFPGATimestamp()-closeLoopTime>1.2)) && tunePID){
+        			&& Timer.getFPGATimestamp()-closeLoopTime>10.0)) && tunePID){
         		tunePID=false;
         		drive.setControlState(DriveControlState.regular);
         		try{
@@ -258,7 +265,7 @@ public class Robot extends IterativeRobot {
         			e.printStackTrace();
         		}
         	}
-        	if((drive.hasIterated || drive.isInHeadingMode()) && tunePID){
+        	if(tunePID){
         		
         		
             	if((OI.leftStick.getRawButton(1) || OI.rightStick.getRawButton(1)) && !drive.isInHeadingMode()){
@@ -277,16 +284,19 @@ public class Robot extends IterativeRobot {
     				Robot.drive.setControlState(DriveControlState.position);
     				Timer.delay(.07);
     				Robot.drive.setSetpoints(leftGain*30.0, rightGain*30.0);
-    				RobotMap.drivePositionLeftPID.setMinimumTimeToRun(Math.abs(leftGain*30.0/DriveTrain.rpmToInchesPerSecond(RobotMap.leftMaxIPS)));
+    				RobotMap.drivePositionLeftPID.setMinimumTimeToRun(Math.abs(leftGain*30.0/(RobotMap.leftMaxIPS)));
     				//(inches) / (max inches / second)
-    				RobotMap.drivePositionRightPID.setMinimumTimeToRun(Math.abs(rightGain*30.0/DriveTrain.rpmToInchesPerSecond(RobotMap.rightMaxIPS)));
+    				RobotMap.drivePositionRightPID.setMinimumTimeToRun(Math.abs(rightGain*30.0/(RobotMap.rightMaxIPS)));
     				RobotMap.drivePositionLeftPID.setTolerance(1.5);
     				RobotMap.drivePositionRightPID.setTolerance(1.5);
     				Timer.delay(.07);
     				while(!RobotMap.drivePositionLeftPID.onTarget() || !RobotMap.drivePositionRightPID.onTarget()){
-    					if(Timer.getFPGATimestamp()-currStart>2.0*leftGain*30.0/72.0 || OI.leftStick.getRawButton(4))
+    					if(Timer.getFPGATimestamp()-currStart>10.0*Math.abs(leftGain)*30.0/RobotMap.leftMaxIPS || OI.leftStick.getRawButton(4)){
+    						//loop time > 200% min time
     						//Boolean algebra gets tricky sometimes
+    						System.out.println("End error: "+RobotMap.drivePositionLeftPID.getError());
     						break;
+    					}
             			Robot.drive.updatePID();
             			writeAllToCSV();
     				}
