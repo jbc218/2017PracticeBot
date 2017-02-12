@@ -17,7 +17,8 @@ public class SynchronousPID {
     private double m_I; // factor for "integral" control
     private double m_D; // factor for "derivative" control
     private double m_F; // factor for feed forward
-    private double m_IZone = 0.0; // only adds to I if error is larger than this 
+    private double m_IZoneMin = 0.0; // only adds to I if error is larger than this 
+    private double m_IZoneMax = Double.MAX_VALUE; //only adds to I if error is smaller than this
     private double m_maximumOutput = 1.0; // |maximum output|
     private double m_minimumOutput = -1.0; // |minimum output|
     private double m_maximumInput = 0.0; // maximum input - limit setpoint to
@@ -111,7 +112,7 @@ public class SynchronousPID {
         else
         	m_errSample=0;
         
-        if ((m_error * m_P < m_maximumOutput) && (m_error * m_P > m_minimumOutput) && !(Math.abs(m_error)>m_IZone && m_IZone!=0) && Math.abs(m_error)>.75) {
+        if ((m_error * m_P < m_maximumOutput) && (m_error * m_P > m_minimumOutput) && (Math.abs(m_error)<m_IZoneMax && Math.abs(m_error)>m_IZoneMin)) {
             m_totalError += m_error;
         } else {
             m_totalError = 0;
@@ -147,11 +148,15 @@ public class SynchronousPID {
         m_I = i;
         m_D = d;
     }
-    public void setIZone(double izone){
-    	m_IZone=izone;
+    public void setIZoneRange(double izoneMin, double izoneMax){
+    	m_IZoneMin=izoneMin;
+    	m_IZoneMax=izoneMax;
     }
-    public double getIZone(){
-    	return m_IZone;
+    public double getIZoneMin(){
+    	return m_IZoneMin;
+    }
+    public double getIZoneMax(){
+    	return m_IZoneMax;
     }
     /**
      * Set the PID controller gain parameters. Set the proportional, integral,

@@ -23,7 +23,7 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
  * determine the default offset. This is subtracted from each sample to
  * determine the heading.
  *
- * This class is for the digital ADXRS453 gyro sensor that connects via SPI. A
+ * This class is for the digital ADXRS450 gyro sensor that connects via SPI. A
  * datasheet can be found here:
  * http://www.analog.com/media/en/technical-documentation/data-sheets/ADXRS453.
  * pdf
@@ -72,8 +72,6 @@ public class GyroHelper extends GyroBase implements Gyro, PIDSource, LiveWindowS
         m_spi.initAccumulator(kSamplePeriod, 0x20000000, 4, 0x0c00000E, 0x04000000, 10, 16, true, true);
 
         calibrate();
-        HAL.report(tResourceType.kResourceType_ADXRS450, port.value);
-        LiveWindow.addSensor("ADXRS450_Gyro", port.value, this);
     }
 
     /**

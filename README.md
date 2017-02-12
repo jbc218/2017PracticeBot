@@ -11,3 +11,5 @@ opencsv-3.8 (CSV helper) - Sourceforge link: https://sourceforge.net/projects/op
 CTRLib (CANTalon libraries) - Indirect link: http://www.ctr-electronics.com/hro.html#product_tabs_technical_resources (under latest installer)
 
 Both the SF2 and NavX libraries are automatically added to the wpilib/user/libs folder on installation. The CANTalon libraries are so large because CTR packed the Hero board libraries in with the rest of the installer.
+
+There's also a pathfinder library but it isn't implemented.

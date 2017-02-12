@@ -28,24 +28,28 @@ public class RobotMap {
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev=4096;
-	public static final double rightMinIPS=DriveTrain.rpmToInchesPerSecond(-480);
-	public static final double rightMaxIPS=DriveTrain.rpmToInchesPerSecond(480);
-	public static final double leftMinIPS=DriveTrain.rpmToInchesPerSecond(-480);
-	public static final double leftMaxIPS=DriveTrain.rpmToInchesPerSecond(480);
+	public static final double rightMinIPS=-210.0;
+	public static final double rightMaxIPS=210.0;
+	public static final double leftMinIPS=-210.0;
+	public static final double leftMaxIPS=210.0;
+	public static final double leftMinIPSPS=-1009.4170013419557;
+	public static final double leftMaxIPSPS=1038.9106737835907;
+	public static final double rightMinIPSPS=-1069.4313941540784;
+	public static final double rightMaxIPSPS=982.7519404608955;
 	
 	//Position, velocity, and gyro PIDF values are all for low gear only
 	public static final double PositionKp=0.015;
 	public static final double PositionKi=0.0;
 	public static final double PositionKd=0.0;
 	public static final double PositionKf=0.0;
-	public static final double VelocityKp=0.0;
-	public static final double VelocityKi=0.0;
+	public static final double VelocityKp=.00055;
+	public static final double VelocityKi=0.0003;
 	public static final double VelocityKd=0.0;
-	public static final double VelocityKf1=0.0;
-	public static final double VelocityKf2=0.0;
-	public static final double GyroKp=0.009;
-	public static final double GyroKi=0.0;
-	public static final double GyroKd=0.0;
+	public static final double VelocityKf1=0.0052;
+	public static final double VelocityKf2=0.0052;
+	public static final double GyroKp=0.015;
+	public static final double GyroKi=0.0012;
+	public static final double GyroKd=0.05;
 	
 	public static final double shooterKp=0.0;
 	public static final double shooterKd=0.0;
@@ -100,6 +104,15 @@ public class RobotMap {
         left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         
+    	left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
+    	right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
+        
+    	RobotMap.driveGyroPID.setIZoneRange(.1,12.0);
+    	RobotMap.drivePositionLeftPID.setIZoneRange(0.0,6.0);
+    	RobotMap.drivePositionRightPID.setIZoneRange(0.0,6.0);
+    	RobotMap.driveVelocityLeftPID.setIZoneRange(-1.0,70.0);
+    	RobotMap.driveVelocityRightPID.setIZoneRange(-1.0,70.0);
+    	
         left1.reverseSensor(true);
         left1.reverseOutput(true);
         left2.reverseOutput(false);
@@ -107,6 +120,8 @@ public class RobotMap {
         right1.reverseSensor(false);
         right1.reverseOutput(true);
         right2.reverseOutput(false);
+        Robot.compressorEnabled=false;
+        
 		
 	}
 }

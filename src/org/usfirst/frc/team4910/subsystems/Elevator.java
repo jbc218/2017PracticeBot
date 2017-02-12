@@ -31,8 +31,8 @@ public class Elevator {
 				case Disabled:
 					currentState=ElevatorState.Disabled;
 					RobotMap.elevControl.set(0);
-					if(OI.thirdStick.getRawButton(2)){
-						while(OI.thirdStick.getRawButton(2)){
+					if(OI.thirdStick.getRawButton(OI.ElevatorToggle)){
+						while(OI.thirdStick.getRawButton(OI.ElevatorToggle)){
 							RunElevator();
 						}
 						currentState=ElevatorState.Running;
@@ -41,8 +41,8 @@ public class Elevator {
 				case Running:
 					currentState=ElevatorState.Running;
 					RunElevator();
-					if(OI.thirdStick.getRawButton(2)){
-						while(OI.thirdStick.getRawButton(2)){
+					if(OI.thirdStick.getRawButton(OI.ElevatorToggle)){
+						while(OI.thirdStick.getRawButton(OI.ElevatorToggle)){
 							RobotMap.elevControl.set(0);
 						}
 						currentState=ElevatorState.Disabled;

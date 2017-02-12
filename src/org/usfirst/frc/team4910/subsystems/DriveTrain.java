@@ -63,7 +63,7 @@ public class DriveTrain {
         
 		@Override
 		public void init() {
-			updatePID();
+			//updatePID();
 			setControlState(DriveControlState.regular);
 			resetAll();
 			hasIterated=false;
@@ -72,8 +72,8 @@ public class DriveTrain {
 		@Override
 		public void exec() {
 			synchronized(DriveTrain.this){
-				if(OI.leftStick.getRawButton(2)){
-					while(OI.leftStick.getRawButton(2));
+				if(OI.leftStick.getRawButton(OI.ReverseDrive)){
+					while(OI.leftStick.getRawButton(OI.ReverseDrive));
 					reverse=!reverse;
 				}
 				double curr_world_linear_accel_x = RobotMap.RIOAccel.getX();
@@ -132,7 +132,7 @@ public class DriveTrain {
 	};
 	
 	private DriveTrain(){
-		updatePID();
+		//updatePID();
 	}
 	
 	public static DriveTrain getInstance(){
@@ -148,7 +148,7 @@ public class DriveTrain {
 	private synchronized DriveControlState handleRegular(){
 		setpointLeft=-OI.leftStick.getY();
 		setpointRight=-OI.rightStick.getY();
-		setpointLeft = reverse ? OI.rightStick.getY() : setpointLeft;
+		setpointLeft = reverse ? OI.rightStick.getY() : setpointLeft; //TODO: make it check if it's in any PID mode and add that as a && conditional.
 		setpointRight = reverse ? OI.leftStick.getY() : setpointRight;
 		double G=0.0;
 		if(headingMode){
@@ -201,11 +201,13 @@ public class DriveTrain {
 	private synchronized DriveControlState handleVelocity(){
 		if(headingMode){
 			double G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
-			RobotMap.driveVelocityLeftPID.setSetpoint(RobotMap.leftMaxIPS*(setpointLeft-G));
-			RobotMap.driveVelocityRightPID.setSetpoint(RobotMap.rightMaxIPS*(setpointRight-G));
+			System.out.println("Gyro output: "+G);
+			RobotMap.driveVelocityLeftPID.setSetpoint((setpointLeft-RobotMap.leftMaxIPS*G));
+			RobotMap.driveVelocityRightPID.setSetpoint((setpointRight+RobotMap.rightMaxIPS*G));
 		}
 		drive(RobotMap.driveVelocityLeftPID.calculate(rpmToInchesPerSecond(RobotMap.left1.getSpeed())),
-				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(-RobotMap.right1.getSpeed())));
+				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(RobotMap.right1.getSpeed())));
+//		Timer.delay(.1);
 		switch(wantedState){
 		case regular:
 			resetAll();
@@ -396,7 +398,7 @@ public class DriveTrain {
 	
 	private synchronized void updateHashTable(){
 		synchronized(map){
-	        double errL=0,errR=0, p=0,i=0,d=0,f1=0,f2=0,outputMin=-1.0, outputMax=1.0, accumL=0.0, accumR=0.0, accumG=0.0, IZone=0.0;
+	        double errL=0,errR=0, p=0,i=0,d=0,f1=0,f2=0,outputMin=-1.0, outputMax=1.0, accumL=0.0, accumR=0.0, accumG=0.0, IZoneMax=Double.MAX_VALUE, IZoneMin=0.0;
 	        if(currentState==DriveControlState.position){
 	        	errL=RobotMap.drivePositionLeftPID.getError();
 	        	errR=RobotMap.drivePositionRightPID.getError();
@@ -405,7 +407,8 @@ public class DriveTrain {
 	        	d=SmartDashboard.getNumber("kD", RobotMap.drivePositionLeftPID.getD());
 	        	f1=SmartDashboard.getNumber("kFL", RobotMap.drivePositionLeftPID.getF());
 	        	f2=SmartDashboard.getNumber("kFR", RobotMap.drivePositionRightPID.getF());
-	        	IZone=SmartDashboard.getNumber("IZone", RobotMap.drivePositionLeftPID.getIZone());
+	        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.drivePositionLeftPID.getIZoneMin());
+	        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.drivePositionLeftPID.getIZoneMax());
 	        	
 	        	accumL=RobotMap.drivePositionLeftPID.getErrorSum();
 	        	accumR=RobotMap.drivePositionRightPID.getErrorSum();
@@ -419,7 +422,9 @@ public class DriveTrain {
 	        	d=SmartDashboard.getNumber("kD", RobotMap.driveVelocityLeftPID.getD());
 	        	f1=SmartDashboard.getNumber("kFL", RobotMap.driveVelocityLeftPID.getF());
 	        	f2=SmartDashboard.getNumber("kFR", RobotMap.driveVelocityRightPID.getF());
-	        	IZone=SmartDashboard.getNumber("IZone", RobotMap.driveVelocityLeftPID.getIZone());
+	        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.driveVelocityLeftPID.getIZoneMin());
+	        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.driveVelocityLeftPID.getIZoneMax());
+	        	
 	        	accumL=RobotMap.driveVelocityLeftPID.getErrorSum();
 	        	accumR=RobotMap.driveVelocityRightPID.getErrorSum();
 	        	outputMin=SmartDashboard.getNumber("outputMin", RobotMap.driveVelocityLeftPID.getMinOut());
@@ -432,7 +437,9 @@ public class DriveTrain {
 	        	d=SmartDashboard.getNumber("kD", 0.0);
 	        	f1=SmartDashboard.getNumber("kFL", 0.0);
 	        	f2=SmartDashboard.getNumber("kFR", 0.0);
-	        	IZone=SmartDashboard.getNumber("IZone", 0.0);
+	        	IZoneMin=SmartDashboard.getNumber("IZoneMin", 0.0);
+	        	IZoneMax=SmartDashboard.getNumber("IZoneMax", Double.MAX_VALUE);
+	        	
 	        	accumL=RobotMap.drivePositionLeftPID.getErrorSum();
 	        	accumR=RobotMap.drivePositionRightPID.getErrorSum();
 	        	outputMin=SmartDashboard.getNumber("outputMin", -0.52);
@@ -480,8 +487,10 @@ public class DriveTrain {
 	    	map.put("ErrorSumLeft", accumL);
 	    	map.put("ErrorSumRight", accumR);
 	    	map.put("ErrorSumGyro", accumG);
-	    	map.put("IZone", IZone);
-	    	map.put("kGIZone", SmartDashboard.getNumber("kGIZone", 8.0));
+	    	map.put("IZoneMin", IZoneMin);
+	    	map.put("IZoneMax", IZoneMax);
+	    	map.put("kGIZoneMin", SmartDashboard.getNumber("kGIZoneMin", RobotMap.driveGyroPID.getIZoneMin()));
+	    	map.put("kGIZoneMax", SmartDashboard.getNumber("kGIZoneMax", RobotMap.driveGyroPID.getIZoneMax()));
 	    	map.put("ShooterPosition", (double)RobotMap.shootControl.getEncPosition());
 	    	map.put("ShooterSpeed", 600.0*(RobotMap.shootControl.getEncVelocity()/80.0)); //4333.3
 	    	map.put("ShootKp", SmartDashboard.getNumber("ShootKp", 0.0));
@@ -526,7 +535,7 @@ public class DriveTrain {
 		}
 	}
 	public void updatePID(){
-		double p,i,d,f1,f2, minOut, maxOut, IZone;
+		double p,i,d,f1,f2, minOut, maxOut, IZoneMin, IZoneMax;
 		if(getCurrentState()==DriveControlState.velocity){
 			p=SmartDashboard.getNumber("kP", RobotMap.driveVelocityLeftPID.getP());
         	i=SmartDashboard.getNumber("kI", RobotMap.driveVelocityLeftPID.getI());
@@ -535,13 +544,15 @@ public class DriveTrain {
         	f2=SmartDashboard.getNumber("kFR", RobotMap.driveVelocityRightPID.getF());
         	minOut=SmartDashboard.getNumber("outputMin", RobotMap.driveVelocityLeftPID.getMinOut());
         	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.driveVelocityLeftPID.getMaxOut());
-        	IZone=SmartDashboard.getNumber("IZone", RobotMap.driveVelocityLeftPID.getIZone());
+        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.driveVelocityLeftPID.getIZoneMin());
+        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.driveVelocityLeftPID.getIZoneMax());
+        	
         	RobotMap.driveVelocityLeftPID.setOutputRange(minOut, maxOut);
         	RobotMap.driveVelocityRightPID.setOutputRange(minOut, maxOut);
         	RobotMap.driveVelocityLeftPID.setPIDF(p, i, d, f1);
         	RobotMap.driveVelocityRightPID.setPIDF(p, i, d, f2);
-        	RobotMap.driveVelocityLeftPID.setIZone(IZone);
-        	RobotMap.driveVelocityRightPID.setIZone(IZone);
+        	RobotMap.driveVelocityLeftPID.setIZoneRange(IZoneMin,IZoneMax);
+        	RobotMap.driveVelocityRightPID.setIZoneRange(IZoneMin,IZoneMax);
 		}else{
 			p=SmartDashboard.getNumber("kP", RobotMap.drivePositionLeftPID.getP());
         	i=SmartDashboard.getNumber("kI", RobotMap.drivePositionLeftPID.getI());
@@ -550,21 +561,23 @@ public class DriveTrain {
         	f2=SmartDashboard.getNumber("kFR", RobotMap.drivePositionRightPID.getF());
         	minOut=SmartDashboard.getNumber("outputMin", RobotMap.drivePositionLeftPID.getMinOut());
         	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.drivePositionLeftPID.getMaxOut());
-        	IZone=SmartDashboard.getNumber("IZone", RobotMap.drivePositionLeftPID.getIZone());
+        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.drivePositionLeftPID.getIZoneMin());
+        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.drivePositionLeftPID.getIZoneMax());
         	
         	RobotMap.drivePositionLeftPID.setOutputRange(minOut, maxOut);
         	RobotMap.drivePositionRightPID.setOutputRange(minOut, maxOut);
         	RobotMap.drivePositionLeftPID.setPIDF(p, i, d, f1);
         	RobotMap.drivePositionRightPID.setPIDF(p, i, d, f2);
-        	RobotMap.drivePositionLeftPID.setIZone(IZone);
-        	RobotMap.drivePositionRightPID.setIZone(IZone);
+        	RobotMap.drivePositionLeftPID.setIZoneRange(IZoneMin,IZoneMax);
+        	RobotMap.drivePositionRightPID.setIZoneRange(IZoneMin,IZoneMax);
 		}
 		p=SmartDashboard.getNumber("kGP", RobotMap.driveGyroPID.getP());
     	i=SmartDashboard.getNumber("kGI", RobotMap.driveGyroPID.getI());
     	d=SmartDashboard.getNumber("kGD", RobotMap.driveGyroPID.getD());
-    	IZone=SmartDashboard.getNumber("kGIZone", RobotMap.driveGyroPID.getIZone());
+    	IZoneMin=SmartDashboard.getNumber("kGIZoneMin", RobotMap.driveGyroPID.getIZoneMin());
+    	IZoneMax=SmartDashboard.getNumber("kGIZoneMax", RobotMap.driveGyroPID.getIZoneMax());
     	RobotMap.driveGyroPID.setPID(p, i, d);
-    	RobotMap.driveGyroPID.setIZone(IZone);
+    	RobotMap.driveGyroPID.setIZoneRange(IZoneMin,IZoneMax);
     	RobotMap.left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
     	RobotMap.right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
 	}

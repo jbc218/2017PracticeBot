@@ -35,19 +35,19 @@ import edu.wpi.first.wpilibj.Timer;
 @SuppressWarnings("unused")
 public class VisionProcessor {
 	private static VisionProcessor instance;
-	private static final double horizontalFOV = 67.0;
-	private static final double verticalFOV = 49.0;
-	private static final double resolutionX=320.0; //I can change these in the future
-	private static final double resolutionY=240.0;
+	private static final double verticalFOV = 67.0;
+	private static final double horizontalFOV = 49.0;
+	private static final double resolutionY=320.0;
+	private static final double resolutionX=240.0;
 	private static final double degPerPixelX = horizontalFOV/resolutionX; //320x240
 	private static final double degPerPixelY = verticalFOV/resolutionY;
-	private static final double centerImg = 159.5; //where the middle of the image is
+	private static final double centerImg = 119.5; //where the middle of the image is
 	private static final double pegTapeWidth=2.0; //In inches.
 	private static final double pegTapeHeight=5.0;
 	private static final double pegTapeDistance=6.25; //Distance, in inches, from the tapes
 	private static final double tapeArea = 10.0; //Just area of one
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
-	private static final double heightToPegCenter = 13.25; //In inches
+	private static final double heightToPegCenter = 7.0; //In inches
 	private static final double minPegContourArea=35;
 	
 	private static final double heightToGoalCenter=0.0; //distance in inches to the center of the tapes
@@ -115,50 +115,49 @@ public class VisionProcessor {
 	BLACK = new Scalar(0, 0, 0),
 
 	//HSV Threshold
-	LOWER_BOUNDS = new Scalar(74,94,25),
+	LOWER_BOUNDS = new Scalar(65,190,25),
 	UPPER_BOUNDS = new Scalar(103,255,168);
 	private static Scalar color = BLACK;
 	private final Iterate iter = new Iterate(){
 		
 		@Override
 		public void init() {
-			visionState=VisionStates.Disabled;
-			hasEnabled=false;
+			synchronized(VisionProcessor.this){
+				visionState=VisionStates.Disabled;
+				hasEnabled=false;
+			}
 		}
 
 		@Override
 		public void exec() {
-			switch(visionState){
-			case Disabled:
-				if(OI.leftStick.getRawButton(10)){
-					//no need to put a while loop, since next iteration it'll go to PegTracking
-					startPegTracking();
-				}
-				break;
-			case PegTracking:
-				if(OI.leftStick.getRawButton(11)){
-					stopPegTracking();
+			synchronized(VisionProcessor.this){
+				switch(visionState){
+				case Disabled:
+					if(OI.leftStick.getRawButton(OI.StartPegTrackingTest)){
+						//no need to put a while loop, since next iteration it'll go to PegTracking
+						startPegTracking();
+					}
+					break;
+				case PegTracking:
+					if(OI.leftStick.getRawButton(OI.StopPegTrackingTest)){
+						stopPegTracking();
+						break;
+					}
+					processPeg();
+					break;
+				case BoilerTracking:
+					break;
+				default:
 					break;
 				}
-				processPeg();
-				break;
-			case BoilerTracking:
-				break;
-			default:
-				break;
-			}
-			
-			
-			if(OI.leftStick.getRawButton(10)){
-				visionState=VisionStates.PegTracking;
-				startPegTracking();
-				while(OI.leftStick.getRawButton(10)){}
 			}
 		}
 
 		@Override
 		public void end() {
-			visionState=VisionStates.Disabled;
+			synchronized(VisionProcessor.this){
+				visionState=VisionStates.Disabled;
+			}
 		}
 		
 	};
@@ -174,102 +173,124 @@ public class VisionProcessor {
 		threshold = new Mat();
 		clusters = new Mat();
 		hierarchy = new Mat();
-		camServer = CameraServer.getInstance();
-		axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
-		cvs = camServer.getVideo(axiscam);
-
+		
 		
 	}
 	public static VisionProcessor getInstance(){
 		return instance==null ? instance=new VisionProcessor() : instance;
 	}
 	public synchronized void startPegTracking(){
-		visionState=VisionStates.PegTracking;
-		cvs.setEnabled(true);
-		hasEnabled=true;
-		cvs.grabFrame(BGR);
-		captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
-		currentAngle=RobotMap.spig.getAngle();
-		boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
-		System.out.println("Able to write image: "+ b);
-		insideTarget = false;
+		synchronized(VisionProcessor.this){
+			visionState=VisionStates.PegTracking;
+			camServer = CameraServer.getInstance();
+			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
+			cvs = camServer.getVideo(axiscam);
+			cvs.setEnabled(true);
+			hasEnabled=true;
+			cvs.grabFrame(BGR);
+			captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
+			currentAngle=RobotMap.spig.getAngle();
+			boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
+			System.out.println("Able to write image: "+ b);
+			insideTarget = false;
+		}
+		
 	
 	}
 	public synchronized void stopPegTracking(){
-		visionState=VisionStates.Disabled;
+		synchronized(VisionProcessor.this){
+			visionState=VisionStates.Disabled;
+		}
 	}
 	private synchronized void processPeg(){
-		cvs.grabFrame(BGR);
-		captureTime=Timer.getFPGATimestamp();
-		currentAngle=RobotMap.spig.getAngle();
-		currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
-		iteration++;
-		ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-		if(!BGR.empty() && !insideTarget){
-			System.out.println("Image not empty");
-			Imgproc.cvtColor(BGR, HSV, Imgproc.COLOR_BGR2HSV); //turns image to HSV format
-			Core.inRange(HSV, LOWER_BOUNDS, UPPER_BOUNDS, threshold); //applies HSV filter
-			Imgproc.findContours(threshold, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE); //Finds contours
-			
-			double contA; //contour area
+		synchronized(VisionProcessor.this){
+			cvs.grabFrame(BGR);
+			captureTime=Timer.getFPGATimestamp();
+			currentAngle=RobotMap.spig.getAngle();
+			currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
+			iteration++;
+			ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+			if(!BGR.empty() && !insideTarget){
+				System.out.println("Image not empty");
+				Imgproc.cvtColor(BGR, HSV, Imgproc.COLOR_BGR2HSV); //turns image to HSV format
+				Core.inRange(HSV, LOWER_BOUNDS, UPPER_BOUNDS, threshold); //applies HSV filter
+				Imgproc.findContours(threshold, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE); //Finds contours
 
-			
-			if(hierarchy.size().height > 0 && hierarchy.size().width > 0 && !insideTarget){
-				System.out.println("Contours found");
-				
-				Rect rec1=null, rec2=null; //one for each peg
-				Rect totalRect=null;
-				boolean hasFoundAPeg=false;
-				for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
-					contA = Imgproc.contourArea(contours.get(idx));
-					if(contA > minPegContourArea && !insideTarget){
-						System.out.println("Large contours found");
-						MatOfPoint approxf1 = new MatOfPoint();
-						MatOfPoint2f mMOP2f1 = new MatOfPoint2f(); // Converted contours
-						MatOfPoint2f mMOP2f2 = new MatOfPoint2f(); // approxPolyDP stored
-						
-						contours.get(idx).convertTo(mMOP2f1, CvType.CV_32FC2);
-						Imgproc.approxPolyDP(mMOP2f1, mMOP2f2, 7, true);
-						mMOP2f2.convertTo(contours.get(idx), CvType.CV_32S);
-						
-						mMOP2f2.convertTo(approxf1, CvType.CV_32S);
-						Imgproc.drawContours(BGR, contours, idx, WHITE);
-						if(!hasFoundAPeg){
-							rec1 = Imgproc.boundingRect(approxf1);
-							Point recMiddle = new Point(rec1.x+.5*rec1.width,rec1.y+.5*rec1.height);
-							Imgproc.circle(BGR, recMiddle, 2, BLUE);
-							hasFoundAPeg=true;
-						}else{
-							rec2 = Imgproc.boundingRect(approxf1);
-							Point recMiddle = new Point(rec2.x+.5*rec2.width,rec2.y+.5*rec2.height);
-							Imgproc.circle(BGR, recMiddle, 2, BLUE);
-							if(Math.min(rec1.tl().x, rec2.tl().x)==rec1.tl().x){
-								totalRect = new Rect(rec1.tl(), rec2.br());
+				double contA; //contour area
+
+
+				if(hierarchy.size().height > 0 && hierarchy.size().width > 0 && !insideTarget){
+					System.out.println("Contours found");
+
+					Rect rec1=null, rec2=null; //one for each peg
+					Rect totalRect=null;
+					boolean hasFoundAPeg=false;
+					for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
+						contA = Imgproc.contourArea(contours.get(idx));
+						if(contA > minPegContourArea && !insideTarget){
+							System.out.println("Large contours found");
+							MatOfPoint approxf1 = new MatOfPoint();
+							MatOfPoint2f mMOP2f1 = new MatOfPoint2f(); // Converted contours
+							MatOfPoint2f mMOP2f2 = new MatOfPoint2f(); // approxPolyDP stored
+
+							contours.get(idx).convertTo(mMOP2f1, CvType.CV_32FC2);
+							Imgproc.approxPolyDP(mMOP2f1, mMOP2f2, 7, true);
+							mMOP2f2.convertTo(contours.get(idx), CvType.CV_32S);
+
+							mMOP2f2.convertTo(approxf1, CvType.CV_32S);
+							Imgproc.drawContours(BGR, contours, idx, WHITE);
+							if(!hasFoundAPeg){
+								rec1 = Imgproc.boundingRect(approxf1);
+								Point recMiddle = new Point(rec1.x+.5*rec1.width,rec1.y+.5*rec1.height);
+								Imgproc.circle(BGR, recMiddle, 2, BLUE);
+								hasFoundAPeg=true;
 							}else{
-								totalRect = new Rect(rec2.tl(), rec1.br());
+								rec2 = Imgproc.boundingRect(approxf1);
+								Point recMiddle = new Point(rec2.x+.5*rec2.width,rec2.y+.5*rec2.height);
+								Imgproc.circle(BGR, recMiddle, 2, BLUE);
+								if(Math.min(rec1.tl().x, rec2.tl().x)==rec1.tl().x){
+									totalRect = new Rect(rec1.tl(), rec2.br());
+								}else{
+									totalRect = new Rect(rec2.tl(), rec1.br());
+								}
+								Imgproc.rectangle(BGR, totalRect.br(), totalRect.tl(), GREEN);
+								recMiddle = new Point(totalRect.x+.5*totalRect.width,totalRect.y+.5*totalRect.height);
+								Imgproc.circle(BGR, recMiddle, 2, RED);
+								break; //no need to go further
 							}
-							Imgproc.rectangle(BGR, totalRect.br(), totalRect.tl(), GREEN);
-							recMiddle = new Point(totalRect.x+.5*totalRect.width,totalRect.y+.5*totalRect.height);
-							Imgproc.circle(BGR, recMiddle, 2, RED);
-							break; //no need to go further
-						}
-						
-					}//end "check size" conditional inside for loop
-					
-					
-				}//ends "iterate over contours" loop
-				Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
-				System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width)); //I'm aligning to the center, if that wasn't obvious
-				System.out.println("Angle to target Y: "+yawAngleToTargetY(totalRect.y+.5*totalRect.height));
-				System.out.println("Ground distance to target: "+DistanceToTarget(totalRect.y+.5*totalRect.height));
-				calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
-				calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget(totalRect.y+.5*totalRect.height)-currentDistance;
-			}//ends "find contours" conditionals
-		
-		}//ends "is image even there" conditional
-	
+
+						}//end "check size" conditional inside for loop
+
+
+					}//ends "iterate over contours" loop
+					Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
+					try{
+						System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width)); //I'm aligning to the center, if that wasn't obvious
+						System.out.println("Angle to target Y: "+yawAngleToTargetY(totalRect.y+.5*totalRect.height));
+						//System.out.println("Ground distance to target: "+DistanceToTarget(totalRect.y+.5*totalRect.height));
+						//Change in angle = old - new, angleSetpoint = calculatedAngle - deltaAngle
+						//It would be twice the current - the old + calculated because of relative position, however the heading is reset when the path starts
+						calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
+						calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget((totalRect.y+.5*totalRect.height))-currentDistance;
+						//calculatedDistance=-257.75+(85.292/Math.atan(0.0280534*calculatedDistance)); 
+						//calculatedDistance = 10.6804+38.2452/(185179*yawAngleToTargetY((totalRect.y+.5*totalRect.height))-3.66216);
+						//I messed up somewhere in my calculations, but this fits the curve.
+						System.out.println("Ground distance to target: "+calculatedDistance);
+					}catch(Exception e){
+						System.out.println("No target found");
+						calculatedAngle=0;
+						calculatedDistance=0;
+					}
+				}//ends "find contours" conditionals
+
+			}//ends "is image even there" conditional
+		}//end sync block
 	}//end of processing
-	public synchronized double getCalculatedAngle(){
+	/**
+	 * 
+	 * @return angle to peg
+	 */
+	public synchronized double getCalculatedPegAngle(){
 		return calculatedAngle;
 	}
 	
