@@ -23,6 +23,7 @@ public class RobotMap {
 	public static SynchronousPID driveGyroPID;
 	public static SynchronousPID shootPID, shootGuidePID; //both should be a simple PD+F loop
 	public static GyroHelper spig;
+	public static AHRS navxGyro;
 	public static CSVWriter writer;
 	public static BuiltInAccelerometer RIOAccel;
 	
@@ -75,6 +76,7 @@ public class RobotMap {
 
 		gearShifter = new DoubleSolenoid(4,5);
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
+		navxGyro = new AHRS(SPI.Port.kMXP);
 		RIOAccel = new BuiltInAccelerometer();
 		left1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
 		right1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);

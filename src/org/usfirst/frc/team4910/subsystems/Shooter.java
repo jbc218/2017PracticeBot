@@ -45,8 +45,12 @@ public class Shooter {
 				SmartDashboard.putNumber("ShootSetpoint", setpoint);
 				shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
 				if(OI.rightStick.getRawButton(1) && currentState!=ShooterState.Idle){
-					while(OI.rightStick.getRawButton(1));
-					newState=ShooterState.Idle;
+					while(OI.rightStick.getRawButton(1)){
+						RobotMap.shootControl.set(0);
+						RobotMap.shootGuide.set(0);
+						newState=ShooterState.Idle;
+						currentState=ShooterState.Idle;
+					}
 				}
 				
 				switch(currentState){
@@ -54,6 +58,7 @@ public class Shooter {
 					newState=ShooterState.Idle;
 					RobotMap.shootControl.set(0);
 					RobotMap.shootGuide.set(0);
+					
 					if(OI.rightStick.getRawButton(OI.ShooterToggle)){
 						while(OI.rightStick.getRawButton(OI.ShooterToggle));
 						newState = ShooterState.Loading;
@@ -64,7 +69,7 @@ public class Shooter {
 					newState = ShooterState.Shooting;
 					//Get shooter ready
 					while((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.rightStick.getRawButton(1)){
-						RobotMap.shootControl.set((-.65));
+						RobotMap.shootControl.set((-.60));
 						if(OI.rightStick.getRawButton(1)){
 							newState=ShooterState.Idle;
 							break;
@@ -86,11 +91,14 @@ public class Shooter {
 					//RobotMap.shootPID.calculate(OI.thirdStick.getY());
 					//RobotMap.shootControl.set((OI.thirdStick.getY())+(shootKp*(2600.0*OI.thirdStick.getY()-600.0*(RobotMap.shootControl.getEncVelocity()/80.0))));
 					//RobotMap.shootControl.set(OI.thirdStick.getY());
-					RobotMap.shootGuide.set(1);
-					RobotMap.shootControl.set((-.65));
-					newState = (Timer.getFPGATimestamp()-shootingStart)>RobotMap.shooterTimeToShoot || OI.rightStick.getRawButton(OI.ShooterToggle) ? ShooterState.Idle : ShooterState.Shooting;
+					newState=ShooterState.Shooting;
+					RobotMap.shootGuide.set(.5);
+					RobotMap.shootControl.set((-.60));
 					while(OI.rightStick.getRawButton(OI.ShooterToggle)){
-						newState = ShooterState.Idle;
+						RobotMap.shootControl.set(0);
+						RobotMap.shootGuide.set(0);
+						newState=ShooterState.Idle;
+						currentState=ShooterState.Idle;
 					}
 					break;
 				default: 
@@ -131,7 +139,7 @@ public class Shooter {
 			RobotMap.shootControl.set((-.55));
 		
 		//When shooter is ready, load
-		RobotMap.shootGuide.set(1);
+		RobotMap.shootGuide.set(.5);
 		double t = Timer.getFPGATimestamp();
 		while(Timer.getFPGATimestamp()-t<.5 && !OI.rightStick.getRawButton(1));
 		while(OI.rightStick.getRawButton(1));

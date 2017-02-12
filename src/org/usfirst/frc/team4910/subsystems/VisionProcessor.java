@@ -41,7 +41,8 @@ public class VisionProcessor {
 	private static final double resolutionX=240.0;
 	private static final double degPerPixelX = horizontalFOV/resolutionX; //320x240
 	private static final double degPerPixelY = verticalFOV/resolutionY;
-	private static final double centerImg = 119.5; //where the middle of the image is
+	private static final double centerImgX = 119.5;
+	private static final double centerImgY = 159.5;
 	private static final double pegTapeWidth=2.0; //In inches.
 	private static final double pegTapeHeight=5.0;
 	private static final double pegTapeDistance=6.25; //Distance, in inches, from the tapes
@@ -82,8 +83,8 @@ public class VisionProcessor {
 	private static double yawAngleToTargetApproxY(double error){return (error)*degPerPixelY;}
 	private static final double focalLengthX = resolutionX/(2.0*Math.tan(Math.toRadians((horizontalFOV/2.0))));
 	private static final double focalLengthY = resolutionY/(2.0*Math.tan(Math.toRadians((verticalFOV/2.0))));
-	private static double yawAngleToTargetX(double error){return Math.toDegrees(Math.atan((error)/focalLengthX));}
-	private static double yawAngleToTargetY(double error){return Math.toDegrees(Math.atan((error)/focalLengthY));}
+	private static double yawAngleToTarget(double error){return Math.toDegrees(Math.atan((error)/focalLengthX));}
+	private static double pitchAngleToTarget(double error){return Math.toDegrees(Math.atan((error)/focalLengthY));}
 	private static double DistanceToTarget(double error){return heightToPegCenter*focalLengthY/error;}
 	//tan(theta)=height/distance, tan(theta)=err/focalY, distance/height = focalY/err 
 	private static double DistanceToTargetApprox(double error){return heightToPegCenter/Math.tan(Math.toRadians(error*degPerPixelY));}
@@ -211,7 +212,7 @@ public class VisionProcessor {
 			iteration++;
 			ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 			if(!BGR.empty() && !insideTarget){
-				System.out.println("Image not empty");
+				//System.out.println("Image not empty");
 				Imgproc.cvtColor(BGR, HSV, Imgproc.COLOR_BGR2HSV); //turns image to HSV format
 				Core.inRange(HSV, LOWER_BOUNDS, UPPER_BOUNDS, threshold); //applies HSV filter
 				Imgproc.findContours(threshold, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE); //Finds contours
@@ -220,7 +221,7 @@ public class VisionProcessor {
 
 
 				if(hierarchy.size().height > 0 && hierarchy.size().width > 0 && !insideTarget){
-					System.out.println("Contours found");
+					//System.out.println("Contours found");
 
 					Rect rec1=null, rec2=null; //one for each peg
 					Rect totalRect=null;
@@ -228,7 +229,7 @@ public class VisionProcessor {
 					for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
 						contA = Imgproc.contourArea(contours.get(idx));
 						if(contA > minPegContourArea && !insideTarget){
-							System.out.println("Large contours found");
+							//System.out.println("Large contours found");
 							MatOfPoint approxf1 = new MatOfPoint();
 							MatOfPoint2f mMOP2f1 = new MatOfPoint2f(); // Converted contours
 							MatOfPoint2f mMOP2f2 = new MatOfPoint2f(); // approxPolyDP stored
@@ -265,17 +266,26 @@ public class VisionProcessor {
 					}//ends "iterate over contours" loop
 					Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
 					try{
-						System.out.println("Angle to target X: "+yawAngleToTargetX(totalRect.x+.5*totalRect.width)); //I'm aligning to the center, if that wasn't obvious
-						System.out.println("Angle to target Y: "+yawAngleToTargetY(totalRect.y+.5*totalRect.height));
+						double deltaAngle = RobotMap.spig.getAngle()-currentAngle;
+						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
 						//System.out.println("Ground distance to target: "+DistanceToTarget(totalRect.y+.5*totalRect.height));
 						//Change in angle = old - new, angleSetpoint = calculatedAngle - deltaAngle
 						//It would be twice the current - the old + calculated because of relative position, however the heading is reset when the path starts
-						calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
-						calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget((totalRect.y+.5*totalRect.height))-currentDistance;
+						//calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
+						//calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget((totalRect.y+.5*totalRect.height))-currentDistance;
 						//calculatedDistance=-257.75+(85.292/Math.atan(0.0280534*calculatedDistance)); 
 						//calculatedDistance = 10.6804+38.2452/(185179*yawAngleToTargetY((totalRect.y+.5*totalRect.height))-3.66216);
 						//I messed up somewhere in my calculations, but this fits the curve.
+						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgX) + deltaAngle;
+						double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
+						calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
+						
+						System.out.println("Center X coordinate: "+(totalRect.x+.5*totalRect.width));
+						System.out.println("Center Y coordinate: "+(totalRect.y+.5*totalRect.height));
+						System.out.println("Angle to target X: "+calculatedAngle);
+						System.out.println("Angle to target Y: "+calculatedAngleY);
 						System.out.println("Ground distance to target: "+calculatedDistance);
+						
 					}catch(Exception e){
 						System.out.println("No target found");
 						calculatedAngle=0;

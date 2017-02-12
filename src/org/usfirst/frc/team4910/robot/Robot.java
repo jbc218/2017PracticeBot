@@ -280,8 +280,9 @@ public class Robot extends IterativeRobot {
         		vision.startPegTracking();
 //        		pat.register(Path.PathType.Position, -(76.234-16.125)/3.0);
 //        		pat.Iterate();
-        		Timer.delay(5);
-        		System.out.println("Vision angle: "+vision.getCalculatedPegAngle());
+        		while(!OI.leftStick.getRawButton(9));
+        		while(OI.leftStick.getRawButton(9));
+        		//System.out.println("Vision angle: "+vision.getCalculatedPegAngle());
 //        		pat.register(Path.PathType.Heading, vision.getCalculatedPegAngle());
 //        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
 //        		pat.Iterate();
