@@ -59,21 +59,30 @@ public class DriveTrain {
 	private boolean trajectoryMode=false;
 	private ContinuousAngleTracker fusedAngle = new ContinuousAngleTracker();
 	private boolean reverse=false;
+	private double posX=0.0, posY=0.0, posXNavX=0.0, posYNavX=0.0, lastLeftEncPos=0.0, lastRightEncPos=0.0;
 	private final Iterate iter = new Iterate(){
         private boolean stateChanged;
         
 		@Override
 		public void init() {
 			//updatePID();
-			//fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
+			RobotMap.navxGyro.reset();
+			fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
 			setControlState(DriveControlState.regular);
 			resetAll();
+			posX=0.0;
+			posY=0.0;
+			posXNavX=0.0;
+			posYNavX=0.0;
+			lastLeftEncPos=0.0;
+			lastRightEncPos=0.0;
 			hasIterated=false;
 		}
 
 		@Override
 		public void exec() {
 			synchronized(DriveTrain.this){
+				double now = Timer.getFPGATimestamp();
 				if(OI.leftStick.getRawButton(OI.ReverseDrive)){
 					while(OI.leftStick.getRawButton(OI.ReverseDrive));
 					reverse=!reverse;
@@ -97,7 +106,6 @@ public class DriveTrain {
 //		    	SmartDashboard.putNumber("InternalJerkX", currentJerkX);
 //		    	SmartDashboard.putNumber("InternalJerkY", currentJerkY);
 				DriveControlState newState;
-				double now = Timer.getFPGATimestamp();
 				switch(currentState){
 				case regular:
 					newState = handleRegular();
@@ -121,8 +129,9 @@ public class DriveTrain {
 					currentStateStartTime=now;
 					stateChanged=true;
 				}
-				outputToDashboard();
+				outputToDashboard(now);
 				hasIterated=true;
+				
 			}
 		}
 
@@ -311,7 +320,7 @@ public class DriveTrain {
 		headingMode=false;
 	}
 	
-	public synchronized void outputToDashboard(){
+	public synchronized void outputToDashboard(double time){
 		updateHashTable();
 		synchronized(map){
 			for(Map.Entry<String, Double> me : map.entrySet()){
@@ -321,7 +330,7 @@ public class DriveTrain {
         SmartDashboard.putNumber("SPI gyro center", RobotMap.spig.getCenter());
         SmartDashboard.putNumber("heading error", setpointHeading-RobotMap.spig.getAngle());
         SmartDashboard.putNumber("battery voltage", DriverStation.getInstance().getBatteryVoltage());
-        
+        SmartDashboard.putNumber("Loop time", time);
         boolean collisionDetected = false;
         
         double curr_world_linear_accel_x = RobotMap.navxGyro.getWorldLinearAccelX();
@@ -344,7 +353,22 @@ public class DriveTrain {
         SmartDashboard.putString("NAVX Firmware Version", RobotMap.navxGyro.getFirmwareVersion());
         SmartDashboard.putNumber("NAVX Pressure", RobotMap.navxGyro.getPressure());
         SmartDashboard.putNumber("NAVX Barometric Pressure", RobotMap.navxGyro.getBarometricPressure());
-           
+        //We want it so that relative to the start, x is left and right, y is up and down.
+        //Also, the navX gyro is backwards
+        posY += (Math.cos(Math.toRadians(RobotMap.spig.getAngle()))
+        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
+        posX -= (Math.sin(Math.toRadians(RobotMap.spig.getAngle()))
+        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
+        posYNavX += (Math.cos(Math.toRadians((double)fusedAngle.getAngle()))
+        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
+        posXNavX -= (Math.sin(Math.toRadians(-(double)fusedAngle.getAngle()))
+        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
+        lastLeftEncPos=countsToInches(-RobotMap.left1.getEncPosition());
+        lastRightEncPos=countsToInches(RobotMap.right1.getEncPosition());
+        SmartDashboard.putNumber("PositionX", posX);
+        SmartDashboard.putNumber("PositionY", posY);
+        SmartDashboard.putNumber("PositionXNavX", posXNavX);
+        SmartDashboard.putNumber("PositionYNavX", posYNavX);
 	}
 	public DriveControlState getCurrentState(){
 		return currentState;

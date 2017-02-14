@@ -116,7 +116,7 @@ public class VisionProcessor {
 	BLACK = new Scalar(0, 0, 0),
 
 	//HSV Threshold
-	LOWER_BOUNDS = new Scalar(65,190,25),
+	LOWER_BOUNDS = new Scalar(65,112,25),
 	UPPER_BOUNDS = new Scalar(103,255,168);
 	private static Scalar color = BLACK;
 	private final Iterate iter = new Iterate(){
@@ -174,7 +174,6 @@ public class VisionProcessor {
 		threshold = new Mat();
 		clusters = new Mat();
 		hierarchy = new Mat();
-		
 		
 	}
 	public static VisionProcessor getInstance(){
@@ -268,18 +267,11 @@ public class VisionProcessor {
 					try{
 						double deltaAngle = RobotMap.spig.getAngle()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
-						//System.out.println("Ground distance to target: "+DistanceToTarget(totalRect.y+.5*totalRect.height));
-						//Change in angle = old - new, angleSetpoint = calculatedAngle - deltaAngle
-						//It would be twice the current - the old + calculated because of relative position, however the heading is reset when the path starts
-						//calculatedAngle=RobotMap.spig.getAngle()+yawAngleToTargetX(totalRect.x+.5*totalRect.width)-currentAngle;
-						//calculatedDistance=((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0)+DistanceToTarget((totalRect.y+.5*totalRect.height))-currentDistance;
-						//calculatedDistance=-257.75+(85.292/Math.atan(0.0280534*calculatedDistance)); 
-						//calculatedDistance = 10.6804+38.2452/(185179*yawAngleToTargetY((totalRect.y+.5*totalRect.height))-3.66216);
-						//I messed up somewhere in my calculations, but this fits the curve.
 						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgX) + deltaAngle;
 						double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
-						calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
-						
+						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
+						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384);
+						//I messed up somewhere in my calculations, but this fits the curve.
 						System.out.println("Center X coordinate: "+(totalRect.x+.5*totalRect.width));
 						System.out.println("Center Y coordinate: "+(totalRect.y+.5*totalRect.height));
 						System.out.println("Angle to target X: "+calculatedAngle);

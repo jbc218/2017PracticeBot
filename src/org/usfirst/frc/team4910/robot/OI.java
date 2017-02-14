@@ -39,6 +39,7 @@ public class OI {
     
     //Third Stick buttons
     public static final int ElevatorToggle=2;
+    
     public static final int climberForwardToggle=3;
     public static final int climberBackwardToggle=4;
     

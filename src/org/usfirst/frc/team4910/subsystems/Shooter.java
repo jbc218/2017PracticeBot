@@ -92,7 +92,7 @@ public class Shooter {
 					//RobotMap.shootControl.set((OI.thirdStick.getY())+(shootKp*(2600.0*OI.thirdStick.getY()-600.0*(RobotMap.shootControl.getEncVelocity()/80.0))));
 					//RobotMap.shootControl.set(OI.thirdStick.getY());
 					newState=ShooterState.Shooting;
-					RobotMap.shootGuide.set(.5);
+					RobotMap.shootGuide.set(1.0);
 					RobotMap.shootControl.set((-.60));
 					while(OI.rightStick.getRawButton(OI.ShooterToggle)){
 						RobotMap.shootControl.set(0);

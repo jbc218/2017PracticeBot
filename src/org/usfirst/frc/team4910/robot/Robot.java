@@ -28,7 +28,7 @@ public class Robot extends IterativeRobot {
     
 	
 	Iterator iteratorEnabled = new Iterator();
-	Iterator iteratorDisabled = new Iterator(); //to do functions while idle, implement later
+	Iterator iteratorDisabled = new Iterator();
 	public static DriveTrain drive;
 	public static Shooter sh;
 	static Elevator elev;
