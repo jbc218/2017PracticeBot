@@ -107,12 +107,12 @@ public class SynchronousPID {
                 }
             }
         }
-        if(m_error<1.2)
+        if(m_error<m_errTolerance)
         	m_errSample++;
         else
         	m_errSample=0;
         
-        if ((m_error * m_P < m_maximumOutput) && (m_error * m_P > m_minimumOutput) && (Math.abs(m_error)<m_IZoneMax && Math.abs(m_error)>m_IZoneMin)) {
+        if (/*(Math.abs(m_error) * m_P <= m_maximumOutput) && (Math.abs(m_error) * m_P >= m_minimumOutput) &&*/ (Math.abs(m_error)<m_IZoneMax && Math.abs(m_error)>m_IZoneMin)) {
             m_totalError += m_error;
         } else {
             m_totalError = 0;

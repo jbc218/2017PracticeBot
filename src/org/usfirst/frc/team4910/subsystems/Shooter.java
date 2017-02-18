@@ -3,6 +3,7 @@ package org.usfirst.frc.team4910.subsystems;
 import org.usfirst.frc.team4910.iterations.Iterate;
 import org.usfirst.frc.team4910.robot.OI;
 import org.usfirst.frc.team4910.robot.RobotMap;
+import org.usfirst.frc.team4910.robot.RobotState;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -25,7 +26,7 @@ public class Shooter {
 	private double loadingStart=0;
 	private double shootingStart=0;
 	private double shootKp=0.0;
-	private double setpoint=SmartDashboard.getNumber("ShootSetpoint", 0.0);
+	//private double setpoint=SmartDashboard.getNumber("ShootSetpoint", 0.0);
 	private final Iterate iter = new Iterate(){
 		
 		@Override
@@ -35,6 +36,7 @@ public class Shooter {
 			currentState=ShooterState.Idle;
 			loadingStart=0;
 			shootingStart=0;
+			RobotMap.shootPID.setPIDF(0.003, 1.3E-5, 0.0, 8.0E-4);
 		}
 
 		@Override
@@ -42,12 +44,13 @@ public class Shooter {
 			//TODO: fix all this code
 			synchronized(Shooter.this){
 				ShooterState newState;
-				SmartDashboard.putNumber("ShootSetpoint", setpoint);
+				//SmartDashboard.putNumber("ShootSetpoint", setpoint);
 				shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
 				if(OI.rightStick.getRawButton(1) && currentState!=ShooterState.Idle){
 					while(OI.rightStick.getRawButton(1)){
 						RobotMap.shootControl.set(0);
 						RobotMap.shootGuide.set(0);
+						RobotMap.shootPID.reset();
 						newState=ShooterState.Idle;
 						currentState=ShooterState.Idle;
 					}
@@ -60,23 +63,32 @@ public class Shooter {
 					RobotMap.shootGuide.set(0);
 					
 					if(OI.rightStick.getRawButton(OI.ShooterToggle)){
+						RobotMap.shootPID.reset();
 						while(OI.rightStick.getRawButton(OI.ShooterToggle));
 						newState = ShooterState.Loading;
 						loadingStart=Timer.getFPGATimestamp();
 					}
 					break;
 				case Loading:
-					newState = ShooterState.Shooting;
+					newState = ShooterState.Loading;
 					//Get shooter ready
-					while((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.rightStick.getRawButton(1)){
-						RobotMap.shootControl.set((-.60));
+					RobotMap.shootPID.setIZoneRange(0.0, 50.0);
+	        		RobotMap.shootPID.resetIntegrator();
+					if((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.rightStick.getRawButton(1)){
+						//RobotMap.shootControl.set((-.60));
+						RobotMap.shootPID.setSetpoint(-.50*1200.0);
+						
+		        		
+	        			RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));
 						if(OI.rightStick.getRawButton(1)){
 							newState=ShooterState.Idle;
 							break;
 									
 						}
+					}else{
+						newState = ShooterState.Shooting;
 					}
-					if(newState!=ShooterState.Idle){
+					if(newState==ShooterState.Shooting){
 						//When shooter is ready, load
 						RobotMap.shootGuide.set(1);
 						double t = Timer.getFPGATimestamp();
@@ -93,8 +105,10 @@ public class Shooter {
 					//RobotMap.shootControl.set(OI.thirdStick.getY());
 					newState=ShooterState.Shooting;
 					RobotMap.shootGuide.set(1.0);
-					RobotMap.shootControl.set((-.60));
+					//RobotMap.shootControl.set((-.60));
+					RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));
 					while(OI.rightStick.getRawButton(OI.ShooterToggle)){
+						RobotMap.shootPID.reset();
 						RobotMap.shootControl.set(0);
 						RobotMap.shootGuide.set(0);
 						newState=ShooterState.Idle;
@@ -119,6 +133,7 @@ public class Shooter {
 		public void end() {
 			RobotMap.shootControl.set(0);
 			RobotMap.shootGuide.set(0);
+			RobotMap.shootPID.reset();
 			currentState=ShooterState.Idle;
 		}
 		
@@ -133,18 +148,18 @@ public class Shooter {
 	public static Shooter getInstance(){
 		return instance==null ? instance=new Shooter() : instance;
 	}
-	private void load(){
-		//Get shooter ready
-		while((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.rightStick.getRawButton(1))
-			RobotMap.shootControl.set((-.55));
-		
-		//When shooter is ready, load
-		RobotMap.shootGuide.set(.5);
-		double t = Timer.getFPGATimestamp();
-		while(Timer.getFPGATimestamp()-t<.5 && !OI.rightStick.getRawButton(1));
-		while(OI.rightStick.getRawButton(1));
-			//RobotMap.shootPID.calculate(OI.thirdStick.getY()); //TODO: Apply vision tracking
-			//RobotMap.shootControl.set(shootKp*(400.0*OI.thirdStick.getY()-RobotMap.shootControl.getEncVelocity()));
-	}
+//	private void load(){
+//		//Get shooter ready
+//		while((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.rightStick.getRawButton(1))
+//			RobotMap.shootControl.set((-.60));
+//		
+//		//When shooter is ready, load
+//		RobotMap.shootGuide.set(.5);
+//		double t = Timer.getFPGATimestamp();
+//		while(Timer.getFPGATimestamp()-t<.5 && !OI.rightStick.getRawButton(1));
+//		while(OI.rightStick.getRawButton(1));
+//			//RobotMap.shootPID.calculate(OI.thirdStick.getY()); //TODO: Apply vision tracking
+//			//RobotMap.shootControl.set(shootKp*(400.0*OI.thirdStick.getY()-RobotMap.shootControl.getEncVelocity()));
+//	}
 	
 }

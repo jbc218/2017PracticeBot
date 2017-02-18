@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * This was stolen from team254, but I changed the name of the class so it's okay
  */
 public class Iterator {
-    public final double kPeriod = 0.01;
+    public final double kPeriod = 0.02;
 
     private boolean isRunning;
 

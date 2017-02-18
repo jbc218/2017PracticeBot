@@ -59,11 +59,11 @@ public class Path {
 				//Robot.drive.updatePID();
         		Robot.drive.setHeadingSetpoint(current.getSetpoint());
         		Timer.delay(.07); //test if needed
-        		RobotMap.driveGyroPID.setMinimumTimeToRun(Math.abs(current.getSetpoint()/60.0)); //(degrees) / (max degrees / second)
+        		RobotMap.driveGyroPID.setMinimumTimeToRun(3.25*Math.abs(current.getSetpoint()/60.0)); //(degrees) / (max degrees / second)
         		RobotMap.driveGyroPID.setTolerance(4);
         		Timer.delay(.07); //It seems necessary at this point
         		while(!RobotMap.driveGyroPID.onTarget()){
-        			if(Timer.getFPGATimestamp()-currStart>1.75*Math.abs(current.getSetpoint()/60.0)){
+        			if(Timer.getFPGATimestamp()-currStart>3.25*Math.abs(current.getSetpoint()/60.0)){
         				System.out.println("End error: "+RobotMap.driveGyroPID.getError()+" Degrees");
         				break;
         			}
@@ -79,14 +79,18 @@ public class Path {
 				Robot.drive.setControlState(DriveControlState.position);
 				Timer.delay(.07);
 				Robot.drive.setSetpoints(current.getSetpoint(), current.getSetpoint());
-				RobotMap.drivePositionLeftPID.setMinimumTimeToRun(Math.abs(current.getSetpoint()/RobotMap.leftMaxIPS));
+				RobotMap.drivePositionLeftPID.setMinimumTimeToRun(1.5*Math.abs(current.getSetpoint()/RobotMap.leftMaxIPS));
 				//(inches) / (max inches / second)
-				RobotMap.drivePositionRightPID.setMinimumTimeToRun(Math.abs(current.getSetpoint()/RobotMap.rightMaxIPS));
+				RobotMap.drivePositionRightPID.setMinimumTimeToRun(1.5*Math.abs(current.getSetpoint()/RobotMap.rightMaxIPS));
 				RobotMap.drivePositionLeftPID.setTolerance(1.5);
 				RobotMap.drivePositionRightPID.setTolerance(1.5);
+				RobotMap.drivePositionLeftPID.setOutputRange(-0.5, 0.5);
+				RobotMap.drivePositionRightPID.setOutputRange(-0.5, 0.5);
+				RobotMap.drivePositionLeftPID.setIZoneRange(0.0, 10.0);
+				RobotMap.drivePositionRightPID.setIZoneRange(0.0, 10.0);
 				Timer.delay(.07);
 				while(!RobotMap.drivePositionLeftPID.onTarget() || !RobotMap.drivePositionRightPID.onTarget()){
-					if(Timer.getFPGATimestamp()-currStart>6.7*Math.abs(current.getSetpoint())/RobotMap.leftMaxIPS || OI.leftStick.getRawButton(OI.DisablePIDTester)){
+					if(Timer.getFPGATimestamp()-currStart>15.0*Math.abs(current.getSetpoint())/(RobotMap.leftMaxIPS/2.0) || OI.leftStick.getRawButton(OI.DisablePIDTester)){
 						//loop time > 200% min time
 						//Boolean algebra gets tricky sometimes
 						System.out.println("End error: "+RobotMap.drivePositionLeftPID.getError());

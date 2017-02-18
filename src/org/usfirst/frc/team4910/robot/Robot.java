@@ -12,6 +12,7 @@ import org.usfirst.frc.team4910.subsystems.*;
 import org.usfirst.frc.team4910.util.CrashTracker;
 import org.usfirst.frc.team4910.util.GyroHelper;
 import org.usfirst.frc.team4910.util.Path;
+import org.usfirst.frc.team4910.util.Path.PathType;
 
 import com.opencsv.CSVWriter;
 
@@ -52,6 +53,7 @@ public class Robot extends IterativeRobot {
         	climb = Climber.getInstance();
         	pat = new Path();
         	CrashTracker.logRobotInit();
+        	iteratorEnabled.register(RobotState.iter);
         	iteratorEnabled.register(drive.getLoop());
         	iteratorEnabled.register(sh.getLoop());
         	iteratorEnabled.register(elev.getLoop());
@@ -92,7 +94,7 @@ public class Robot extends IterativeRobot {
     
     public void disabledPeriodic(){
         try{
-        	
+        	System.gc();
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
         	throw t;
@@ -203,6 +205,7 @@ public class Robot extends IterativeRobot {
         	closeLoopTime=0;
         	drive.disableHeadingMode();
         	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear because it's just easier
+        	RobotMap.shootControl.setEncPosition(0);
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
         	throw t;
@@ -211,6 +214,42 @@ public class Robot extends IterativeRobot {
     
     public void teleopPeriodic() {
         try{
+        	//RobotMap.shootControl.set(OI.thirdStick.getY());
+        	//SmartDashboard.putNumber("ShooterSpeed", RobotState.getShooterSpeed());
+        	//SmartDashboard.putNumber("ShooterPosition", RobotMap.shootControl.getEncPosition());
+        	if(OI.leftStick.getRawButton(OI.shooterPIDTest)){
+        		while(OI.leftStick.getRawButton(OI.shooterPIDTest));
+        		System.out.println("Shooter PID enabled");
+        		RobotMap.shootPID.setOutputRange(-1.0, 0.0);
+        		RobotMap.shootPID.setPIDF(
+        				SmartDashboard.getNumber("ShootKp", 0.0), 
+        				SmartDashboard.getNumber("ShootKi", 0.0), 
+        				SmartDashboard.getNumber("ShootKd", 0.0),
+        				SmartDashboard.getNumber("ShootKf", 0.0));
+        		Timer.delay(.1);
+        		SmartDashboard.putNumber("ShootKp", RobotMap.shootPID.getP());
+				SmartDashboard.putNumber("ShootKi", RobotMap.shootPID.getI());
+				SmartDashboard.putNumber("ShootKd", RobotMap.shootPID.getD());
+				SmartDashboard.putNumber("ShootKf", RobotMap.shootPID.getF());
+        		RobotMap.shootPID.setSetpoint(1200.0*OI.thirdStick.getY()); //1200 is max speed
+        		RobotMap.shootPID.setIZoneRange(0.0, 50.0);
+        		RobotMap.shootPID.resetIntegrator();
+        		Timer.delay(.2); //3.846E-4
+        		while(!OI.leftStick.getRawButton(OI.shooterPIDTest)){
+        			double output=RobotMap.shootPID.calculate(RobotState.getShooterSpeed());
+        			RobotMap.shootControl.set(output);
+        			SmartDashboard.putNumber("ShooterSpeed", RobotState.getShooterSpeed());
+        			SmartDashboard.putNumber("ShootErrorSum", RobotMap.shootPID.getErrorSum());
+        			SmartDashboard.putNumber("ShootError", RobotMap.shootPID.getSetpoint()-RobotState.getShooterSpeed());
+        			SmartDashboard.putNumber("ShootError2", RobotMap.shootPID.getError());
+        			SmartDashboard.putNumber("ShootOutput", output);
+        			SmartDashboard.putNumber("ShootSetpoint", RobotMap.shootPID.getSetpoint());
+        		}
+        		while(OI.leftStick.getRawButton(OI.shooterPIDTest));
+        		Timer.delay(.1);
+        		System.out.println("Shooter PID disabled");
+        		RobotMap.shootControl.set(0);
+        	}
 			if(OI.rightStick.getRawButton(OI.GearShiftToggle)){
 				if(RobotMap.gearShifter.get().equals(DoubleSolenoid.Value.kForward)){
 					RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
@@ -242,46 +281,97 @@ public class Robot extends IterativeRobot {
 					System.out.println("Compressor started");
 				}
 			}
-        	if(OI.leftStick.getRawButton(OI.EnablePIDTester) && !tunePID){
-        		closeLoopTime=Timer.getFPGATimestamp();
-        		createNewCSV(); //this MUST go before the next line
-        		tunePID=true;
-        		drive.setControlState(DriveControlState.velocity);
-        		while(OI.leftStick.getRawButton(OI.EnablePIDTester));
-        		
-//    			drive.setSetpoints(76.234-14.5,76.234-14.5);
+//        	if(OI.leftStick.getRawButton(OI.EnablePIDTester) && !tunePID){
+//        		closeLoopTime=Timer.getFPGATimestamp();
+//        		createNewCSV(); //this MUST go before the next line
+//        		tunePID=true;
+//        		drive.setControlState(DriveControlState.velocity);
+//        		while(OI.leftStick.getRawButton(OI.EnablePIDTester));
+//        		
+//    			drive.setSetpoints(-10.0, -10.0);
 //        		drive.setControlState(DriveControlState.position);
-//        		RobotMap.drivePositionLeftPID.calculate(DriveTrain.countsToInches(-RobotMap.left1.getEncPosition()));
-//        		RobotMap.drivePositionRightPID.calculate(DriveTrain.countsToInches(RobotMap.right1.getEncPosition()));
-//        		RobotMap.drivePositionLeftPID.calculate(DriveTrain.countsToInches(-RobotMap.left1.getEncPosition()));
-//        		RobotMap.drivePositionRightPID.calculate(DriveTrain.countsToInches(RobotMap.right1.getEncPosition()));
+//        		RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos());
+//        		RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos());
+//        		RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos());
+//        		RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos());
 ////        		double leftGain, rightGain;
 ////        		leftGain = Math.abs(OI.leftStick.getY())<.15 ? 0 : -OI.leftStick.getY();
 ////        		//rightGain = Math.abs(OI.rightStick.getY())<.15 ? 0 : OI.rightStick.getY();
 ////        		rightGain=leftGain;
 //        		drive.setSetpoints(76.234-14.5 , 76.234-14.5); //86.94-14.5 //76.234-14.5
 //        		System.out.println(RobotMap.drivePositionLeftPID.getError());
-        	}
+//        	}
         	if((OI.leftStick.getRawButton(OI.DisablePIDTester) || (RobotMap.drivePositionLeftPID.onTarget() && RobotMap.drivePositionRightPID.onTarget()
         			&& Timer.getFPGATimestamp()-closeLoopTime>10.0)) && tunePID){
         		tunePID=false;
         		drive.setControlState(DriveControlState.regular);
         		try{
+        			
         			RobotMap.writer.close();
         		}catch(IOException e){
         			e.printStackTrace();
         		}
         	}
-        	if(OI.leftStick.getRawButton(OI.AutoPathTest)){
+        	if(OI.leftStick.getRawButton(OI.AutoPathTest)){ //9
         		while(OI.leftStick.getRawButton(OI.AutoPathTest));
-//        		pat.register(Path.PathType.Position, -(86.94-16.125));
-//        		pat.register(Path.PathType.Heading, 60.0);
+        		
+//        		pat.register(PathType.Position, -40.0);
 //        		pat.Iterate();
         		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		double ang = -vision.getCalculatedPegAngle();
+        		vision.stopPegTracking();
+        		pat.register(PathType.Heading, ang);
+        		pat.Iterate();
+        		
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		double dist=-vision.getCalculatedPegDistance();
+        		vision.stopPegTracking();
+        		pat.register(Path.PathType.Position, dist/3.0);
+  //        		pat.register(Path.PathType.Heading, 60.0);
+        		pat.Iterate();
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		ang=-vision.getCalculatedPegAngle();
+        		vision.stopPegTracking();
+        		pat.register(PathType.Heading, ang);
+        		pat.Iterate();
+        		
+        		
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		//dist=-vision.getCalculatedPegDistance();
+        		vision.stopPegTracking();
+        		pat.register(Path.PathType.Position, dist/3.0);
+  //        		pat.register(Path.PathType.Heading, 60.0);
+        		pat.Iterate();
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		ang=-vision.getCalculatedPegAngle();
+        		vision.stopPegTracking();
+        		pat.register(PathType.Heading, ang);
+        		pat.Iterate();
+        		
+        		
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		//dist=-vision.getCalculatedPegDistance();
+        		vision.stopPegTracking();
+        		pat.register(Path.PathType.Position, dist/3.0);
+  //        		pat.register(Path.PathType.Heading, 60.0);
+        		pat.Iterate();
+        		vision.startPegTracking();
+        		Timer.delay(1.1);
+        		ang=-vision.getCalculatedPegAngle();
+        		vision.stopPegTracking();
+        		pat.register(PathType.Heading, ang);
+        		pat.Iterate();
+        		
 //        		pat.register(Path.PathType.Position, -(76.234-16.125)/3.0);
 //        		pat.Iterate();
-        		while(!OI.leftStick.getRawButton(9));
-        		while(OI.leftStick.getRawButton(9));
+        		while(!OI.leftStick.getRawButton(OI.AutoPathTest));
+        		while(OI.leftStick.getRawButton(OI.AutoPathTest));
         		//System.out.println("Vision angle: "+vision.getCalculatedPegAngle());
 //        		pat.register(Path.PathType.Heading, vision.getCalculatedPegAngle());
 //        		pat.register(Path.PathType.Position, (76.234-14.5)/3.0);
@@ -289,7 +379,7 @@ public class Robot extends IterativeRobot {
 //        		Timer.delay(.1);
 //        		pat.register(Path.PathType.Heading, vision.getCalculatedPegAngle());
 //        		pat.register(Path.PathType.Position, ((76.234-14.5)/3.0)-0.5);
-        		vision.stopPegTracking();
+        		//vision.stopPegTracking();
         	}
         	if(tunePID){
         		
@@ -379,6 +469,7 @@ public class Robot extends IterativeRobot {
     }
     /**
      * Create CSV file with timestamp for keeping track of values
+     * 
      */
     public void createNewCSV(){
     	try{

@@ -18,6 +18,7 @@ import org.opencv.videoio.VideoCapture;
 import org.usfirst.frc.team4910.iterations.Iterate;
 import org.usfirst.frc.team4910.robot.OI;
 import org.usfirst.frc.team4910.robot.RobotMap;
+import org.usfirst.frc.team4910.robot.RobotState;
 
 import edu.wpi.cscore.AxisCamera;
 import edu.wpi.cscore.CvSink;
@@ -49,7 +50,7 @@ public class VisionProcessor {
 	private static final double tapeArea = 10.0; //Just area of one
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
 	private static final double heightToPegCenter = 7.0; //In inches
-	private static final double minPegContourArea=35;
+	private static final double minPegContourArea=30;
 	
 	private static final double heightToGoalCenter=0.0; //distance in inches to the center of the tapes
 	private static final double goalCamFromCenterX=0.0; //from a top view, the base of the triangle from camera position to robot center
@@ -63,7 +64,7 @@ public class VisionProcessor {
 	private static double goalTransitionalDistance(double cD, double t){
 		double X=cD*Math.sin(Math.toRadians(t));
 		double Y=cD*Math.cos(Math.toRadians(t));
-		double ans=Math.sqrt((X+goalCamFromCenterX)*(X+goalCamFromCenterX)+(Y+goalCamFromCenterY)*(Y+goalCamFromCenterY));
+		double ans=Math.hypot(X+goalCamFromCenterX, Y+goalCamFromCenterY);
 		return ans;
 	}
 	/**
@@ -103,6 +104,7 @@ public class VisionProcessor {
 	private static double currentDistance=0.0;
 	private static double calculatedAngle=0.0;
 	private static double calculatedDistance=0.0;
+	private static double _angle=0.0, _distance=0.0;
 	private enum VisionStates {
 			Disabled, PegTracking, BoilerTracking;
 	}
@@ -116,8 +118,8 @@ public class VisionProcessor {
 	BLACK = new Scalar(0, 0, 0),
 
 	//HSV Threshold
-	LOWER_BOUNDS = new Scalar(65,112,25),
-	UPPER_BOUNDS = new Scalar(103,255,168);
+	LOWER_BOUNDS = new Scalar(65,119,78),
+	UPPER_BOUNDS = new Scalar(97,255,146);
 	private static Scalar color = BLACK;
 	private final Iterate iter = new Iterate(){
 		
@@ -227,6 +229,7 @@ public class VisionProcessor {
 					boolean hasFoundAPeg=false;
 					for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
 						contA = Imgproc.contourArea(contours.get(idx));
+						
 						if(contA > minPegContourArea && !insideTarget){
 							//System.out.println("Large contours found");
 							MatOfPoint approxf1 = new MatOfPoint();
@@ -268,20 +271,33 @@ public class VisionProcessor {
 						double deltaAngle = RobotMap.spig.getAngle()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
 						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgX) + deltaAngle;
-						double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
+						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
 						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
-						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384);
+						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384)+deltaDistance;
 						//I messed up somewhere in my calculations, but this fits the curve.
-						System.out.println("Center X coordinate: "+(totalRect.x+.5*totalRect.width));
-						System.out.println("Center Y coordinate: "+(totalRect.y+.5*totalRect.height));
+						//Data calculated using notepad++ and an (unfortunate) kid looking for something to do
+						//I used notepad++ to format the data such that I could plug it into Wolfram Alphas new "development" cloud
+						//which is just Mathematica-lite. I used FindFit[] to get some good points. For whatever reason, this failed
+						//and gave me some nonsense graph that looked off by a bit. I then plugged the points into desmos.com and plotted
+						//the graph WA gave me, and added 20.0 to the curve (it looked close and I just guessed) and it fit perfectly. 
+						//System.out.println("Center X coordinate and angle: "+(totalRect.x+.5*totalRect.width)+", "+RobotState.getSpigHeading());
+						//System.out.println("Estimated angle and actual: "+calculatedAngle+", "+RobotState.getSpigHeading());
+						//System.out.println("Center Y coordinate and distance: "+(totalRect.y+.5*totalRect.height)+", "+RobotState.getLeftPos());
+						calculatedAngle = -0.362377+0.736886*calculatedAngle+0.00256394*calculatedAngle*calculatedAngle+0.000025452*calculatedAngle*calculatedAngle*calculatedAngle;
+						//another curve regression to account for lens
 						System.out.println("Angle to target X: "+calculatedAngle);
-						System.out.println("Angle to target Y: "+calculatedAngleY);
-						System.out.println("Ground distance to target: "+calculatedDistance);
+						//System.out.println("Angle to target Y: "+calculatedAngleY);
 						
+						System.out.println("Ground distance to target: "+calculatedDistance);
+						//System.out.println("Distance Y: "+calculatedDistance*Math.cos(Math.toRadians(calculatedAngle)));
+						_angle=calculatedAngle;
+						_distance=calculatedDistance;
 					}catch(Exception e){
 						System.out.println("No target found");
 						calculatedAngle=0;
 						calculatedDistance=0;
+						_angle=calculatedAngle;
+						_distance=calculatedDistance;
 					}
 				}//ends "find contours" conditionals
 
@@ -293,7 +309,15 @@ public class VisionProcessor {
 	 * @return angle to peg
 	 */
 	public synchronized double getCalculatedPegAngle(){
-		return calculatedAngle;
+		return _angle;
 	}
-	
+	public synchronized double getCalculatedPegDistance(){
+		return _distance;
+	}
+	private synchronized void setPegAngle(double a){
+		_angle=a;
+	}
+	private synchronized void setPegDistance(double d){
+		_distance=d;
+	}
 }

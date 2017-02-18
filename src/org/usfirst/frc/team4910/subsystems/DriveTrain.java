@@ -11,6 +11,7 @@ import org.usfirst.frc.team4910.iterations.Iterate;
 import org.usfirst.frc.team4910.robot.OI;
 import org.usfirst.frc.team4910.robot.Robot;
 import org.usfirst.frc.team4910.robot.RobotMap;
+import org.usfirst.frc.team4910.robot.RobotState;
 import org.usfirst.frc.team4910.subsystems.DriveTrain.DriveControlState;
 import org.usfirst.frc.team4910.util.*;
 
@@ -94,13 +95,12 @@ public class DriveTrain {
 //		    	double curr_world_linear_accel_y = RobotMap.RIOAccel.getY();
 //		    	double currentJerkY = curr_world_linear_accel_y - last_world_linear_accel_y;
 //		    	last_world_linear_accel_y = curr_world_linear_accel_y;
-//		    	double jerkXY = Math.sqrt(currentJerkX*currentJerkX+currentJerkY*currentJerkY); //net jerk in XY plane
-//		    	double accelXY = Math.sqrt(curr_world_linear_accel_x*curr_world_linear_accel_x+curr_world_linear_accel_y*curr_world_linear_accel_y);
+//		    	double jerkXY = Math.hypot(currentJerkX,currentJerkY); //net jerk in XY plane
+//		    	double accelXY = Math.hypot(curr_world_linear_accel_x,curr_world_linear_accel_y);
 //		    	maxAccel = Math.max(maxAccel, accelXY);
 //		    	maxJerk = Math.max(maxJerk, jerkXY);
-//		    	maxVelocity = Math.max(maxVelocity, Math.sqrt(
-//		    			0.0254*rpmToInchesPerSecond(RobotMap.left1.getSpeed())*0.0254*rpmToInchesPerSecond(RobotMap.left1.getSpeed())
-//		    		   + 0.0254*rpmToInchesPerSecond(RobotMap.right1.getSpeed())*0.0254*rpmToInchesPerSecond(RobotMap.right1.getSpeed()) ));
+//		    	maxVelocity = Math.max(maxVelocity, Math.hypot(
+//		    			0.0254*RobotState.getLeftSpeed(),0.0254*RobotState.getRightSpeed() ));
 //		    	SmartDashboard.putNumber("InternalAccelX", curr_world_linear_accel_x);
 //		    	SmartDashboard.putNumber("InternalAccelY", curr_world_linear_accel_y);
 //		    	SmartDashboard.putNumber("InternalJerkX", currentJerkX);
@@ -160,8 +160,8 @@ public class DriveTrain {
 	private synchronized DriveControlState handleRegular(){
 		setpointLeft=-OI.leftStick.getY();
 		setpointRight=-OI.rightStick.getY();
-		setpointLeft = reverse ? OI.rightStick.getY() : setpointLeft; //TODO: make it check if it's in any PID mode and add that as a && conditional.
-		setpointRight = reverse ? OI.leftStick.getY() : setpointRight;
+		setpointLeft = reverse && !headingMode ? OI.rightStick.getY() : setpointLeft;
+		setpointRight = reverse && !headingMode ? OI.leftStick.getY() : setpointRight;
 		double G=0.0;
 		if(headingMode){
 			G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
@@ -183,8 +183,8 @@ public class DriveTrain {
 		}
 	}
 	private synchronized DriveControlState handlePosition(){
-		drive(RobotMap.drivePositionLeftPID.calculate(countsToInches(-RobotMap.left1.getEncPosition())), 
-				RobotMap.drivePositionRightPID.calculate(countsToInches(RobotMap.right1.getEncPosition())));
+		drive(RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos()), 
+				RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos()));
 //		if(trajectoryMode){
 //			double dAngle = Pathfinder.boundHalfDegrees(Pathfinder.r2d(leftEF.getHeading())-RobotMap.spig.getAngle());
 //			double turn = 0.8*(-1/80.0)*dAngle;
@@ -217,8 +217,8 @@ public class DriveTrain {
 			RobotMap.driveVelocityLeftPID.setSetpoint((setpointLeft-RobotMap.leftMaxIPS*G));
 			RobotMap.driveVelocityRightPID.setSetpoint((setpointRight+RobotMap.rightMaxIPS*G));
 		}
-		drive(RobotMap.driveVelocityLeftPID.calculate(rpmToInchesPerSecond(RobotMap.left1.getSpeed())),
-				RobotMap.driveVelocityRightPID.calculate(rpmToInchesPerSecond(RobotMap.right1.getSpeed())));
+		drive(RobotMap.driveVelocityLeftPID.calculate(RobotState.getLeftSpeed()),
+				RobotMap.driveVelocityRightPID.calculate(RobotState.getRightSpeed()));
 //		Timer.delay(.1);
 		switch(wantedState){
 		case regular:
@@ -237,8 +237,7 @@ public class DriveTrain {
 		
 	}
 	private synchronized DriveControlState handleMP(){
-		//TODO: implement this sometime later
-		//Never mind. Auto doesn't require this much sophistication
+		//TODO: unimplement the rest of this
 		
 		return DriveControlState.motionprofile;
 	}
@@ -331,44 +330,10 @@ public class DriveTrain {
         SmartDashboard.putNumber("heading error", setpointHeading-RobotMap.spig.getAngle());
         SmartDashboard.putNumber("battery voltage", DriverStation.getInstance().getBatteryVoltage());
         SmartDashboard.putNumber("Loop time", time);
-        boolean collisionDetected = false;
+
         
-        double curr_world_linear_accel_x = RobotMap.navxGyro.getWorldLinearAccelX();
-        double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
-        last_world_linear_accel_x = curr_world_linear_accel_x;
-        double curr_world_linear_accel_y = RobotMap.navxGyro.getWorldLinearAccelY();
-        double currentJerkY = curr_world_linear_accel_y - last_world_linear_accel_y;
-        last_world_linear_accel_y = curr_world_linear_accel_y;
-        
-        if ( ( Math.abs(currentJerkX) > .7f ) ||
-             ( Math.abs(currentJerkY) > .7f) ) { //.5f is the collision threshold
-            collisionDetected = true;
-        }
-        
-        SmartDashboard.putBoolean("Has collided", collisionDetected);
-        SmartDashboard.putBoolean("NAVX Connected", RobotMap.navxGyro.isConnected());
-        SmartDashboard.putBoolean("NAVX Calibrating", RobotMap.navxGyro.isCalibrating());
-        SmartDashboard.putBoolean("NAVX Moving Detected", RobotMap.navxGyro.isMoving());
-        SmartDashboard.putBoolean("NAVX Rotation detected", RobotMap.navxGyro.isRotating());
-        SmartDashboard.putString("NAVX Firmware Version", RobotMap.navxGyro.getFirmwareVersion());
-        SmartDashboard.putNumber("NAVX Pressure", RobotMap.navxGyro.getPressure());
-        SmartDashboard.putNumber("NAVX Barometric Pressure", RobotMap.navxGyro.getBarometricPressure());
-        //We want it so that relative to the start, x is left and right, y is up and down.
-        //Also, the navX gyro is backwards
-        posY += (Math.cos(Math.toRadians(RobotMap.spig.getAngle()))
-        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
-        posX -= (Math.sin(Math.toRadians(RobotMap.spig.getAngle()))
-        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
-        posYNavX += (Math.cos(Math.toRadians((double)fusedAngle.getAngle()))
-        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
-        posXNavX -= (Math.sin(Math.toRadians(-(double)fusedAngle.getAngle()))
-        		*(countsToInches(-RobotMap.left1.getEncPosition())-lastLeftEncPos+countsToInches(RobotMap.right1.getEncPosition())-lastRightEncPos)/2.0);
-        lastLeftEncPos=countsToInches(-RobotMap.left1.getEncPosition());
-        lastRightEncPos=countsToInches(RobotMap.right1.getEncPosition());
-        SmartDashboard.putNumber("PositionX", posX);
-        SmartDashboard.putNumber("PositionY", posY);
-        SmartDashboard.putNumber("PositionXNavX", posXNavX);
-        SmartDashboard.putNumber("PositionYNavX", posYNavX);
+        SmartDashboard.putBoolean("Has collided", ( Math.abs(RobotState.getJerkX()) > .7f ) ||
+                ( Math.abs(RobotState.getJerkY()) > .7f));
 	}
 	public DriveControlState getCurrentState(){
 		return currentState;
@@ -477,20 +442,12 @@ public class DriveTrain {
 	        map.put("Time", Timer.getFPGATimestamp()-Robot.closeLoopTime);
 	        map.put("LeftError", errL);
 	        map.put("RightError", errR);
-	        map.put("LeftPosition",  countsToInches(-RobotMap.left1.getEncPosition()));
-	        map.put("RightPosition", countsToInches(RobotMap.right1.getEncPosition()));
-	        map.put("LeftVelocity", rpmToInchesPerSecond(RobotMap.left1.getSpeed()));
-	        map.put("RightVelocity", rpmToInchesPerSecond(RobotMap.right1.getSpeed()));
+	        map.put("LeftPosition",  RobotState.getLeftPos());
+	        map.put("RightPosition", RobotState.getRightPos());
+	        map.put("LeftVelocity", RobotState.getLeftSpeed());
+	        map.put("RightVelocity", RobotState.getRightSpeed());
 	        map.put("LeftSetpoint", setpointLeft);
 	        map.put("RightSetpoint", setpointRight);
-	        map.put("WeightedLeftError", countsToInches(errL));
-	        map.put("WeightedRightError", countsToInches(errR));
-	        map.put("WeightedLeftPosition", RobotMap.left1.getPosition());
-	        map.put("WeightedRightPosition", RobotMap.right1.getPosition());
-	        map.put("WeightedLeftVelocity", countsToInches(RobotMap.left1.getEncVelocity()));
-	        map.put("WeightedRightVelocity", countsToInches(RobotMap.right1.getEncVelocity()));
-	        map.put("WeightedLeftSetpoint", countsToInches(setpointLeft));
-	        map.put("WeightedRightSetpoint", countsToInches(setpointRight));
 	        map.put("kP", p);
 	        map.put("kI", i);
 	        map.put("kD", d);
@@ -519,11 +476,12 @@ public class DriveTrain {
 	    	map.put("IZoneMax", IZoneMax);
 	    	map.put("kGIZoneMin", SmartDashboard.getNumber("kGIZoneMin", RobotMap.driveGyroPID.getIZoneMin()));
 	    	map.put("kGIZoneMax", SmartDashboard.getNumber("kGIZoneMax", RobotMap.driveGyroPID.getIZoneMax()));
-	    	map.put("ShooterPosition", (double)RobotMap.shootControl.getEncPosition());
-	    	map.put("ShooterSpeed", 600.0*(RobotMap.shootControl.getEncVelocity()/80.0)); //4333.3
-	    	map.put("ShootKp", SmartDashboard.getNumber("ShootKp", 0.0));
-	    	map.put("ShootSetpoint", (2600.0*OI.thirdStick.getY()));
-	    	map.put("ShootError", (2600.0*OI.thirdStick.getY())-600.0*(RobotMap.shootControl.getEncVelocity()/80.0));
+	    	map.put("ShooterSpeed", RobotState.getShooterSpeed());
+	    	//map.put("ShootKp", SmartDashboard.getNumber("ShootKp", 0.0));
+	    	map.put("ShootErrorSum", RobotMap.shootPID.getErrorSum());
+	    	map.put("ShootSetpoint", RobotMap.shootPID.getSetpoint());
+	    	map.put("ShootError", RobotMap.shootPID.getError());
+	    	//Make sure not to add these for compbot; the processor can only handle so much
 	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
 	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
 	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());

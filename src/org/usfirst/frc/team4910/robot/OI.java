@@ -26,6 +26,7 @@ public class OI {
     public static final int EnablePIDTester=3;
     public static final int DisablePIDTester=4;
     public static final int TestMaxAccel=5;
+    public static final int shooterPIDTest=6;
     public static final int AutoPathTest=9;
     public static final int StartPegTrackingTest=10;
     public static final int StopPegTrackingTest=11;

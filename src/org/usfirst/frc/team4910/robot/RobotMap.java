@@ -39,16 +39,16 @@ public class RobotMap {
 	public static final double rightMaxIPSPS=982.7519404608955;
 	
 	//Position, velocity, and gyro PIDF values are all for low gear only
-	public static final double PositionKp=0.015;
-	public static final double PositionKi=0.0;
-	public static final double PositionKd=0.0;
+	public static final double PositionKp=0.020;
+	public static final double PositionKi=0.0001;
+	public static final double PositionKd=5.0;
 	public static final double PositionKf=0.0;
-	public static final double VelocityKp=.00055;
-	public static final double VelocityKi=0.0003;
+	public static final double VelocityKp=.00062;
+	public static final double VelocityKi=0.00035;
 	public static final double VelocityKd=0.0;
-	public static final double VelocityKf1=0.0052;
-	public static final double VelocityKf2=0.0052;
-	public static final double GyroKp=0.015;
+	public static final double VelocityKf1=0.0053;
+	public static final double VelocityKf2=0.0053;
+	public static final double GyroKp=0.017;
 	public static final double GyroKi=0.0012;
 	public static final double GyroKd=0.05;
 	
@@ -60,9 +60,10 @@ public class RobotMap {
 	public static final double shooterGuideKf=0.0;
 	public static final double shooterGuideOptimalSpeed=0.0;
 	public static final double shooterGuideOptimalTime=0.5;
-	public static final double shooterSpinupTime=2.0;
+	public static final double shooterSpinupTime=2.2;
 	public static final double shooterTimeToShoot=60.0;
 	public static final double VelocityRampRate=24.0;
+	
 	
 	public static void init(){
 		left1 = new CANTalon(1);
@@ -103,12 +104,13 @@ public class RobotMap {
         shootGuidePID = new SynchronousPID(shooterGuideKp, 0.0, shooterGuideKd, shooterGuideKf);
         left1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));
+        shootControl.configEncoderCodesPerRev(75);
         left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         
     	left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
     	right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
-        
+        shootControl.setVoltageRampRate(24);
     	RobotMap.driveGyroPID.setIZoneRange(.1,12.0);
     	RobotMap.drivePositionLeftPID.setIZoneRange(0.0,6.0);
     	RobotMap.drivePositionRightPID.setIZoneRange(0.0,6.0);
@@ -126,4 +128,5 @@ public class RobotMap {
         
 		
 	}
+	
 }

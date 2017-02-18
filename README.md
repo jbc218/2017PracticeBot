@@ -1,4 +1,8 @@
 #This is code for FRC team 4910, East Cobb Robotics, 2017 practice robot.
+This code will cease to be updated after our competition bot is made. The day of "Final commit" was/will be the day compbot is done.
+Competition bot code should be similar to this code, however that code will not be released until after state competition.
+
+You may also notice that we implement code that pushes a ton of data to a CSV file every iteration. We obviously plan on getting rid of that for compbot, and its only use is to provide testing data for us (using a python script to graph data). Many such functions are just for testing purposes.
 
 The libraries needed to run this code include:
 
