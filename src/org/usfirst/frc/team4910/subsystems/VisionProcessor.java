@@ -52,6 +52,9 @@ public class VisionProcessor {
 	private static final double heightToPegCenter = 7.0; //In inches
 	private static final double minPegContourArea=30;
 	
+
+	private static final double optimalShootDistance=102.18;
+	private static final double optimalShootAngle=86.33;
 	private static final double heightToGoalCenter=0.0; //distance in inches to the center of the tapes
 	private static final double goalCamFromCenterX=0.0; //from a top view, the base of the triangle from camera position to robot center
 	private static final double goalCamFromCenterY=0.0; //height of that same triangle
@@ -121,6 +124,10 @@ public class VisionProcessor {
 	LOWER_BOUNDS = new Scalar(65,119,78),
 	UPPER_BOUNDS = new Scalar(97,255,146);
 	private static Scalar color = BLACK;
+	private static double itercount=0.0;
+	private static double pegDistSum=0.0;
+	private static double pegAngleSum=0.0;
+	private static VideoCapture vc;
 	private final Iterate iter = new Iterate(){
 		
 		@Override
@@ -128,6 +135,7 @@ public class VisionProcessor {
 			synchronized(VisionProcessor.this){
 				visionState=VisionStates.Disabled;
 				hasEnabled=false;
+				itercount=pegDistSum=pegAngleSum=0.0;
 			}
 		}
 
@@ -146,7 +154,10 @@ public class VisionProcessor {
 						stopPegTracking();
 						break;
 					}
+					itercount++;
 					processPeg();
+					pegAngleSum+=getCalculatedPegAngle();
+					pegDistSum+=getCalculatedPegDistance();
 					break;
 				case BoilerTracking:
 					break;
@@ -160,6 +171,7 @@ public class VisionProcessor {
 		public void end() {
 			synchronized(VisionProcessor.this){
 				visionState=VisionStates.Disabled;
+				itercount=pegDistSum=pegAngleSum=0.0;
 			}
 		}
 		
@@ -183,13 +195,16 @@ public class VisionProcessor {
 	}
 	public synchronized void startPegTracking(){
 		synchronized(VisionProcessor.this){
+			vc = new VideoCapture("http://10.49.10.40/mjpg/video.mjpg");
+			vc.open("http://10.49.10.40/mjpg/video.mjpg");
 			visionState=VisionStates.PegTracking;
-			camServer = CameraServer.getInstance();
-			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
-			cvs = camServer.getVideo(axiscam);
-			cvs.setEnabled(true);
+//			camServer = CameraServer.getInstance();
+//			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
+//			cvs = camServer.getVideo(axiscam);
+//			cvs.setEnabled(true);
+			Timer.delay(.1);
 			hasEnabled=true;
-			cvs.grabFrame(BGR);
+//			cvs.grabFrame(BGR);
 			captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
 			currentAngle=RobotMap.spig.getAngle();
 			boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
@@ -202,11 +217,15 @@ public class VisionProcessor {
 	public synchronized void stopPegTracking(){
 		synchronized(VisionProcessor.this){
 			visionState=VisionStates.Disabled;
+			itercount=pegDistSum=pegAngleSum=0.0;
+//			cvs.setEnabled(false);
+			vc.release();
 		}
 	}
 	private synchronized void processPeg(){
 		synchronized(VisionProcessor.this){
-			cvs.grabFrame(BGR);
+			//cvs.grabFrame(BGR);
+			vc.read(BGR);
 			captureTime=Timer.getFPGATimestamp();
 			currentAngle=RobotMap.spig.getAngle();
 			currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
@@ -292,12 +311,13 @@ public class VisionProcessor {
 						//System.out.println("Distance Y: "+calculatedDistance*Math.cos(Math.toRadians(calculatedAngle)));
 						_angle=calculatedAngle;
 						_distance=calculatedDistance;
+						
 					}catch(Exception e){
 						System.out.println("No target found");
 						calculatedAngle=0;
 						calculatedDistance=0;
-						_angle=calculatedAngle;
-						_distance=calculatedDistance;
+						_angle+=calculatedAngle;
+						_distance+=calculatedDistance;
 					}
 				}//ends "find contours" conditionals
 
@@ -314,10 +334,13 @@ public class VisionProcessor {
 	public synchronized double getCalculatedPegDistance(){
 		return _distance;
 	}
-	private synchronized void setPegAngle(double a){
-		_angle=a;
+	public synchronized double getAveragePegAngle(){
+		return pegAngleSum/itercount;
 	}
-	private synchronized void setPegDistance(double d){
-		_distance=d;
+	public synchronized double getAveragePegDistance(){
+		return pegDistSum/itercount;
+	}
+	public synchronized double getCurrentIteration(){
+		return itercount;
 	}
 }

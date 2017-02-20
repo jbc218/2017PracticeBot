@@ -67,8 +67,8 @@ public class DriveTrain {
 		@Override
 		public void init() {
 			//updatePID();
-			RobotMap.navxGyro.reset();
-			fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
+			//RobotMap.navxGyro.reset();
+			//fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
 			setControlState(DriveControlState.regular);
 			resetAll();
 			posX=0.0;
@@ -88,7 +88,7 @@ public class DriveTrain {
 					while(OI.leftStick.getRawButton(OI.ReverseDrive));
 					reverse=!reverse;
 				}
-				fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
+				//fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
 //				double curr_world_linear_accel_x = RobotMap.RIOAccel.getX();
 //	        	double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
 //		    	last_world_linear_accel_x = curr_world_linear_accel_x;
@@ -129,7 +129,9 @@ public class DriveTrain {
 					currentStateStartTime=now;
 					stateChanged=true;
 				}
-				outputToDashboard(now);
+				//This should help the CPU so that it doesn't absolutely die during competition
+				if(RobotMap.testerCodeEnabled)
+					outputToDashboard(now);
 				hasIterated=true;
 				
 			}
@@ -295,12 +297,12 @@ public class DriveTrain {
 	private synchronized void drive(double left, double right){
 		leftOut=-left;
 		rightOut=right;
-        if ( Math.abs(left) < .075 && !headingMode && currentState==DriveControlState.regular) {
+        if ( Math.abs(left) < .09 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.left1.set(0);
         }else{
         	RobotMap.left1.set(-left);
         }
-        if ( Math.abs(right) < .075 && !headingMode && currentState==DriveControlState.regular) {
+        if ( Math.abs(right) < .09 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.right1.set(0);
         }else{
         	RobotMap.right1.set(right);
@@ -482,37 +484,37 @@ public class DriveTrain {
 	    	map.put("ShootSetpoint", RobotMap.shootPID.getSetpoint());
 	    	map.put("ShootError", RobotMap.shootPID.getError());
 	    	//Make sure not to add these for compbot; the processor can only handle so much
-	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
-	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
-	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());
-	    	map.put("NAVXCompass", (double)RobotMap.navxGyro.getCompassHeading());
-	    	map.put("NAVXFullHeading", (double)fusedAngle.getAngle());
-	    	map.put("NAVXTotalYaw", (double)RobotMap.navxGyro.getAngle());
-	    	map.put("NAVXYawRate", (double)RobotMap.navxGyro.getRate());
-	    	map.put("NAVXAccelX", (double)RobotMap.navxGyro.getWorldLinearAccelX());
-	    	map.put("NAVXAccelY", (double)RobotMap.navxGyro.getWorldLinearAccelY());
-	    	map.put("NAVXAccelZ", (double)RobotMap.navxGyro.getWorldLinearAccelZ());
-	    	map.put("NAVXVelocityX", (double)RobotMap.navxGyro.getVelocityX());
-	    	map.put("NAVXVelocityY", (double)RobotMap.navxGyro.getVelocityY());
-	    	map.put("NAVXVelocityZ", (double)RobotMap.navxGyro.getVelocityZ());
-	    	map.put("NAVXDisplacementX", (double)RobotMap.navxGyro.getDisplacementX());
-	    	map.put("NAVXDisplacementY", (double)RobotMap.navxGyro.getDisplacementY());
-	    	map.put("NAVXDisplacementZ", (double)RobotMap.navxGyro.getDisplacementZ());
-	    	map.put("NAVXRawGyroX", (double)RobotMap.navxGyro.getRawGyroX());
-	    	map.put("NAVXRawGyroY", (double)RobotMap.navxGyro.getRawGyroY());
-	    	map.put("NAVXRawGyroZ", (double)RobotMap.navxGyro.getRawGyroZ());
-	    	map.put("NAVXRawAccelX", (double)RobotMap.navxGyro.getRawAccelX());
-	    	map.put("NAVXRawAccelY", (double)RobotMap.navxGyro.getRawAccelY());
-	    	map.put("NAVXRawAccelZ", (double)RobotMap.navxGyro.getRawAccelZ());
-	    	map.put("NAVXRawMagX", (double)RobotMap.navxGyro.getRawMagX());
-	    	map.put("NAVXRawMagY", (double)RobotMap.navxGyro.getRawMagY());
-	    	map.put("NAVXRawMagZ", (double)RobotMap.navxGyro.getRawMagZ());
-	    	map.put("NAVXTemp", (double)RobotMap.navxGyro.getTempC());
-	    	map.put("NAVXTimestamp", (double)RobotMap.navxGyro.getLastSensorTimestamp());
-	    	map.put("NAVXQuaternionX", (double)RobotMap.navxGyro.getQuaternionX());
-	    	map.put("NAVXQuaternionY", (double)RobotMap.navxGyro.getQuaternionY());
-	    	map.put("NAVXQuaternionZ", (double)RobotMap.navxGyro.getQuaternionZ());
-	    	map.put("NAVXQuaternionW", (double)RobotMap.navxGyro.getQuaternionW());
+//	    	map.put("NAVXYaw", (double)RobotMap.navxGyro.getYaw());
+//	    	map.put("NAVXPitch", (double)RobotMap.navxGyro.getPitch());
+//	    	map.put("NAVXRoll", (double)RobotMap.navxGyro.getRoll());
+//	    	map.put("NAVXCompass", (double)RobotMap.navxGyro.getCompassHeading());
+//	    	map.put("NAVXFullHeading", (double)fusedAngle.getAngle());
+//	    	map.put("NAVXTotalYaw", (double)RobotMap.navxGyro.getAngle());
+//	    	map.put("NAVXYawRate", (double)RobotMap.navxGyro.getRate());
+//	    	map.put("NAVXAccelX", (double)RobotMap.navxGyro.getWorldLinearAccelX());
+//	    	map.put("NAVXAccelY", (double)RobotMap.navxGyro.getWorldLinearAccelY());
+//	    	map.put("NAVXAccelZ", (double)RobotMap.navxGyro.getWorldLinearAccelZ());
+//	    	map.put("NAVXVelocityX", (double)RobotMap.navxGyro.getVelocityX());
+//	    	map.put("NAVXVelocityY", (double)RobotMap.navxGyro.getVelocityY());
+//	    	map.put("NAVXVelocityZ", (double)RobotMap.navxGyro.getVelocityZ());
+//	    	map.put("NAVXDisplacementX", (double)RobotMap.navxGyro.getDisplacementX());
+//	    	map.put("NAVXDisplacementY", (double)RobotMap.navxGyro.getDisplacementY());
+//	    	map.put("NAVXDisplacementZ", (double)RobotMap.navxGyro.getDisplacementZ());
+//	    	map.put("NAVXRawGyroX", (double)RobotMap.navxGyro.getRawGyroX());
+//	    	map.put("NAVXRawGyroY", (double)RobotMap.navxGyro.getRawGyroY());
+//	    	map.put("NAVXRawGyroZ", (double)RobotMap.navxGyro.getRawGyroZ());
+//	    	map.put("NAVXRawAccelX", (double)RobotMap.navxGyro.getRawAccelX());
+//	    	map.put("NAVXRawAccelY", (double)RobotMap.navxGyro.getRawAccelY());
+//	    	map.put("NAVXRawAccelZ", (double)RobotMap.navxGyro.getRawAccelZ());
+//	    	map.put("NAVXRawMagX", (double)RobotMap.navxGyro.getRawMagX());
+//	    	map.put("NAVXRawMagY", (double)RobotMap.navxGyro.getRawMagY());
+//	    	map.put("NAVXRawMagZ", (double)RobotMap.navxGyro.getRawMagZ());
+//	    	map.put("NAVXTemp", (double)RobotMap.navxGyro.getTempC());
+//	    	map.put("NAVXTimestamp", (double)RobotMap.navxGyro.getLastSensorTimestamp());
+//	    	map.put("NAVXQuaternionX", (double)RobotMap.navxGyro.getQuaternionX());
+//	    	map.put("NAVXQuaternionY", (double)RobotMap.navxGyro.getQuaternionY());
+//	    	map.put("NAVXQuaternionZ", (double)RobotMap.navxGyro.getQuaternionZ());
+//	    	map.put("NAVXQuaternionW", (double)RobotMap.navxGyro.getQuaternionW());
 		}
 	}
 	public synchronized Map<String, Double> getValueTable(){
@@ -520,6 +522,11 @@ public class DriveTrain {
 			return map;
 		}
 	}
+	/**
+	 * Updates the PID+F values using the smart dashboard.
+	 * 
+	 * This should only be used when tuning PID values.
+	 */
 	public void updatePID(){
 		double p,i,d,f1,f2, minOut, maxOut, IZoneMin, IZoneMax;
 		if(getCurrentState()==DriveControlState.velocity){

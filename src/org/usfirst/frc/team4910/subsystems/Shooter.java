@@ -62,7 +62,7 @@ public class Shooter {
 					RobotMap.shootControl.set(0);
 					RobotMap.shootGuide.set(0);
 					
-					if(OI.rightStick.getRawButton(OI.ShooterToggle)){
+					if(OI.rightStick.getRawButton(OI.ShooterToggle) && Math.abs(RobotState.getShooterSpeed())<.2*1200.0){
 						RobotMap.shootPID.reset();
 						while(OI.rightStick.getRawButton(OI.ShooterToggle));
 						newState = ShooterState.Loading;
@@ -81,7 +81,11 @@ public class Shooter {
 		        		
 	        			RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));
 						if(OI.rightStick.getRawButton(1)){
+							RobotMap.shootControl.set(0);
+							RobotMap.shootGuide.set(0);
+							RobotMap.shootPID.reset();
 							newState=ShooterState.Idle;
+							currentState=ShooterState.Idle;
 							break;
 									
 						}
@@ -94,8 +98,13 @@ public class Shooter {
 						double t = Timer.getFPGATimestamp();
 					
 						while(Timer.getFPGATimestamp()-t<.5 && !OI.rightStick.getRawButton(1));
-						while(OI.rightStick.getRawButton(1))
+						while(OI.rightStick.getRawButton(1)){
+							RobotMap.shootControl.set(0);
+							RobotMap.shootGuide.set(0);
+							RobotMap.shootPID.reset();
 							newState=ShooterState.Idle;
+							currentState=ShooterState.Idle;
+						}
 					}
 					break;
 				case Shooting:
@@ -107,7 +116,7 @@ public class Shooter {
 					RobotMap.shootGuide.set(1.0);
 					//RobotMap.shootControl.set((-.60));
 					RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));
-					while(OI.rightStick.getRawButton(OI.ShooterToggle)){
+					if(OI.rightStick.getRawButton(OI.ShooterToggle)){
 						RobotMap.shootPID.reset();
 						RobotMap.shootControl.set(0);
 						RobotMap.shootGuide.set(0);

@@ -23,9 +23,10 @@ public class RobotMap {
 	public static SynchronousPID driveGyroPID;
 	public static SynchronousPID shootPID, shootGuidePID; //both should be a simple PD+F loop
 	public static GyroHelper spig;
-	public static AHRS navxGyro;
+	//public static AHRS navxGyro;
 	public static CSVWriter writer;
 	public static BuiltInAccelerometer RIOAccel;
+	public static AnalogInput ultra;
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev=4096;
@@ -38,23 +39,24 @@ public class RobotMap {
 	public static final double rightMinIPSPS=-1069.4313941540784;
 	public static final double rightMaxIPSPS=982.7519404608955;
 	
-	//Position, velocity, and gyro PIDF values are all for low gear only
-	public static final double PositionKp=0.020;
-	public static final double PositionKi=0.0001;
-	public static final double PositionKd=5.0;
+	//Position, velocity, and gyro PIDF values are all for high gear only
+	public static final double PositionKp=0.013; //0.0155
+	public static final double PositionKi=0.0;//0.000075; 
+	public static final double PositionKd=99999.0;
 	public static final double PositionKf=0.0;
-	public static final double VelocityKp=.00062;
-	public static final double VelocityKi=0.00035;
+	public static final double VelocityKp=.0007;
+	public static final double VelocityKi=0.00036;
 	public static final double VelocityKd=0.0;
 	public static final double VelocityKf1=0.0053;
 	public static final double VelocityKf2=0.0053;
-	public static final double GyroKp=0.017;
-	public static final double GyroKi=0.0012;
-	public static final double GyroKd=0.05;
+	public static final double GyroKp=0.0325;
+	public static final double GyroKi=0.0013;
+	public static final double GyroKd=1.0;
 	
-	public static final double shooterKp=0.0;
+	public static final double shooterKp=0.003;
+	public static final double shooterKi=1.3E-5;
 	public static final double shooterKd=0.0;
-	public static final double shooterKf=0.0;
+	public static final double shooterKf=8.0E-4;
 	public static final double shooterGuideKp=0.0;
 	public static final double shooterGuideKd=0.0;
 	public static final double shooterGuideKf=0.0;
@@ -62,8 +64,9 @@ public class RobotMap {
 	public static final double shooterGuideOptimalTime=0.5;
 	public static final double shooterSpinupTime=2.2;
 	public static final double shooterTimeToShoot=60.0;
-	public static final double VelocityRampRate=24.0;
 	
+	public static final boolean testerCodeEnabled=true;
+	public static final double VelocityRampRate=testerCodeEnabled ? 32.0 : 0.0 ;
 	
 	public static void init(){
 		left1 = new CANTalon(1);
@@ -74,10 +77,11 @@ public class RobotMap {
 		climbControl = new CANTalon(6);
 		shootGuide = new CANTalon(7);
 		shootControl = new CANTalon(8);
-
+		
+		ultra = new AnalogInput(0);
 		gearShifter = new DoubleSolenoid(4,5);
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
-		navxGyro = new AHRS(SPI.Port.kMXP);
+		//navxGyro = new AHRS(SPI.Port.kMXP);
 		RIOAccel = new BuiltInAccelerometer();
 		left1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
 		right1.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
@@ -100,7 +104,7 @@ public class RobotMap {
         driveVelocityLeftPID.setOutputRange(leftMinIPS, leftMaxIPS);
         driveVelocityRightPID.setOutputRange(rightMinIPS, rightMaxIPS);
         driveGyroPID = new SynchronousPID(GyroKp, GyroKi, GyroKd);
-        shootPID = new SynchronousPID(shooterKp, 0.0, shooterKd, shooterKf); //If we have to use I, we're doing something wrong
+        shootPID = new SynchronousPID(shooterKp, shooterKi, shooterKd, shooterKf);
         shootGuidePID = new SynchronousPID(shooterGuideKp, 0.0, shooterGuideKd, shooterGuideKf);
         left1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));
@@ -127,6 +131,26 @@ public class RobotMap {
         Robot.compressorEnabled=false;
         
 		
+        
+        
+        
+        
+        
+        
+        /**
+         * 
+         * 
+         * Remember to update firmware, etc
+         * 
+         * 
+         */
+        
+        
+        
+        
+        
+        
+        
 	}
 	
 }

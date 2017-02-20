@@ -36,6 +36,9 @@ public class OI {
     //Right Stick buttons
     public static final int ShooterToggle=1;
     public static final int GearShiftToggle=2;
+    public static final int UltrasonicTest=3;
+    public static final int PIDDistTest=5;
+    public static final int PIDAngleTest=6;
     public static final int CompressorToggle=11;
     
     //Third Stick buttons

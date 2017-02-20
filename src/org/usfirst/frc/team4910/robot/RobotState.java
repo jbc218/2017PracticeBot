@@ -35,7 +35,7 @@ public class RobotState {
 		@Override
 		public void init() {
 			reset();
-			fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
+			//fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
 			posX=0.0; posY=0.0; posXNavX=0.0; posYNavX=0.0; lastLeftPos=0.0; lastRightPos=0.0; currentLeftPos=0.0;  currentRightPos=0.0;
 			
 			time = Timer.getFPGATimestamp();
@@ -47,14 +47,14 @@ public class RobotState {
 		public void exec() {
 			synchronized(this){
 				spigHeading=RobotMap.spig.getAngle();
-				fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
+				//fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
 				navxFullHeading = (double)-fusedAngle.getAngle();
 				leftSpeed = DriveTrain.rpmToInchesPerSecond(RobotMap.left1.getSpeed());
 				rightSpeed = DriveTrain.rpmToInchesPerSecond(RobotMap.right1.getSpeed());
 				currentLeftPos = DriveTrain.countsToInches(-RobotMap.left1.getEncPosition());
 				currentRightPos = DriveTrain.countsToInches(RobotMap.right1.getEncPosition());
-				accelerationX = 385.827*RobotMap.navxGyro.getWorldLinearAccelX(); //inches per second^2
-				accelerationY = 385.827*RobotMap.navxGyro.getWorldLinearAccelY();
+				accelerationX = 385.827*RobotMap.RIOAccel.getX(); //inches per second^2
+				accelerationY = 385.827*RobotMap.RIOAccel.getY();
 				//shooterSpeed = 600.0*(RobotMap.shootControl.getEncVelocity()/80.0);
 		        shooterSpeed = RobotMap.shootControl.getSpeed();
 				//We want it so that relative to the start, x is left and right, y is up and down.
@@ -90,9 +90,9 @@ public class RobotState {
 	};
 	
 	public static void reset(){
-		fusedAngle.reset();
+		//fusedAngle.reset();
 		RobotMap.spig.reset();
-		RobotMap.navxGyro.reset();
+		//RobotMap.navxGyro.reset();
 		RobotMap.left1.setEncPosition(0);
 		RobotMap.right1.setEncPosition(0);
 	}
