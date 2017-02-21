@@ -37,9 +37,13 @@ public class OI {
     public static final int ShooterToggle=1;
     public static final int GearShiftToggle=2;
     public static final int UltrasonicTest=3;
+    public static final int Gates=4;
     public static final int PIDDistTest=5;
     public static final int PIDAngleTest=6;
+    public static final int AutoTest=7;
+    public static final int ResetGyro=8;
     public static final int CompressorToggle=11;
+
     
     //Third Stick buttons
     public static final int ElevatorToggle=2;

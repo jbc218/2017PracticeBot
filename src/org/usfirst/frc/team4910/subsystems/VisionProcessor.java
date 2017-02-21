@@ -127,7 +127,6 @@ public class VisionProcessor {
 	private static double itercount=0.0;
 	private static double pegDistSum=0.0;
 	private static double pegAngleSum=0.0;
-	private static VideoCapture vc;
 	private final Iterate iter = new Iterate(){
 		
 		@Override
@@ -143,7 +142,7 @@ public class VisionProcessor {
 		public void exec() {
 			synchronized(VisionProcessor.this){
 				switch(visionState){
-				case Disabled:
+				case Disabled: dysebled:
 					if(OI.leftStick.getRawButton(OI.StartPegTrackingTest)){
 						//no need to put a while loop, since next iteration it'll go to PegTracking
 						startPegTracking();
@@ -195,18 +194,16 @@ public class VisionProcessor {
 	}
 	public synchronized void startPegTracking(){
 		synchronized(VisionProcessor.this){
-			vc = new VideoCapture("http://10.49.10.40/mjpg/video.mjpg");
-			vc.open("http://10.49.10.40/mjpg/video.mjpg");
 			visionState=VisionStates.PegTracking;
-//			camServer = CameraServer.getInstance();
-//			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
-//			cvs = camServer.getVideo(axiscam);
-//			cvs.setEnabled(true);
+			camServer = CameraServer.getInstance();
+			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
+			cvs = camServer.getVideo(axiscam);
+			cvs.setEnabled(true);
 			Timer.delay(.1);
 			hasEnabled=true;
-//			cvs.grabFrame(BGR);
+			cvs.grabFrame(BGR);
 			captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
-			currentAngle=RobotMap.spig.getAngle();
+			currentAngle=RobotState.getProtectedHeading();
 			boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
 			System.out.println("Able to write image: "+ b);
 			insideTarget = false;
@@ -218,16 +215,14 @@ public class VisionProcessor {
 		synchronized(VisionProcessor.this){
 			visionState=VisionStates.Disabled;
 			itercount=pegDistSum=pegAngleSum=0.0;
-//			cvs.setEnabled(false);
-			vc.release();
+			cvs.setEnabled(false);
 		}
 	}
 	private synchronized void processPeg(){
 		synchronized(VisionProcessor.this){
-			//cvs.grabFrame(BGR);
-			vc.read(BGR);
+			cvs.grabFrame(BGR);
 			captureTime=Timer.getFPGATimestamp();
-			currentAngle=RobotMap.spig.getAngle();
+			currentAngle=RobotState.getProtectedHeading();
 			currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
 			iteration++;
 			ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -287,7 +282,7 @@ public class VisionProcessor {
 					}//ends "iterate over contours" loop
 					Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
 					try{
-						double deltaAngle = RobotMap.spig.getAngle()-currentAngle;
+						double deltaAngle = RobotState.getProtectedHeading()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
 						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgX) + deltaAngle;
 						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);

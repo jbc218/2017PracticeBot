@@ -17,7 +17,7 @@ public class RobotMap {
 	
 	public static CANTalon left1,left2,right1,right2;
 	public static CANTalon elevControl, shootControl, climbControl, agitateControl, shootGuide;
-	public static DoubleSolenoid gearShifter;
+	public static DoubleSolenoid gearShifter, gates;
 	public static Compressor c;
 	public static SynchronousPID drivePositionLeftPID,drivePositionRightPID,driveVelocityLeftPID,driveVelocityRightPID;
 	public static SynchronousPID driveGyroPID;
@@ -40,18 +40,22 @@ public class RobotMap {
 	public static final double rightMaxIPSPS=982.7519404608955;
 	
 	//Position, velocity, and gyro PIDF values are all for high gear only
-	public static final double PositionKp=0.013; //0.0155
-	public static final double PositionKi=0.0;//0.000075; 
-	public static final double PositionKd=99999.0;
+	public static final double PositionKp=0.0125; //0.0155
+	public static final double PositionKi=0.0002;//0.000075; 
+	public static final double PositionKd=0.04;
 	public static final double PositionKf=0.0;
-	public static final double VelocityKp=.0007;
-	public static final double VelocityKi=0.00036;
+	public static final double VelocityKp=.0006;
+	public static final double VelocityKi=0.00026;
 	public static final double VelocityKd=0.0;
 	public static final double VelocityKf1=0.0053;
 	public static final double VelocityKf2=0.0053;
-	public static final double GyroKp=0.0325;
-	public static final double GyroKi=0.0013;
-	public static final double GyroKd=1.0;
+	public static final double GyroKp=0.011; //0.0325
+	public static final double GyroKi=0.0035; //0.0013
+	public static final double GyroKd=0.01; //1.0
+	
+	public static final double GyroSmallKp=0.0;
+	public static final double GyroSmallKi=0.0;
+	public static final double GyroSmallKd=0.0;
 	
 	public static final double shooterKp=0.003;
 	public static final double shooterKi=1.3E-5;
@@ -80,6 +84,7 @@ public class RobotMap {
 		
 		ultra = new AnalogInput(0);
 		gearShifter = new DoubleSolenoid(4,5);
+		gates = new DoubleSolenoid(6,7);
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
 		//navxGyro = new AHRS(SPI.Port.kMXP);
 		RIOAccel = new BuiltInAccelerometer();
@@ -93,6 +98,7 @@ public class RobotMap {
         right1.set(0);
         right2.changeControlMode(CANTalon.TalonControlMode.Follower);
         right2.set(right1.getDeviceID());
+        shootControl.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
         shootControl.setVoltageRampRate(24);
         shootControl.setEncPosition(0);
         c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match    
@@ -109,8 +115,14 @@ public class RobotMap {
         left1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         shootControl.configEncoderCodesPerRev(75);
-        left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
-        right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+        //practice bot
+//        left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+//        right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+        
+        //comp bot
+        left1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
+        right1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
+        
         
     	left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
     	right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));

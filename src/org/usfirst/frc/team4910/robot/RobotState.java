@@ -26,17 +26,25 @@ public class RobotState {
 	private static double leftSpeed, rightSpeed=0.0; 
 	private static double navxFullHeading=0.0;
 	private static double spigHeading=0.0;
+	private static double spigHeadingOffset=0.0; //Value heading is subtracted by (when reset)
+	private static double protectedSpigHeading=0.0;//This can only be zeroed at the beginning of the match
+												//or whenever enabled, otherwise it will always give a full heading
+	
+	
 	private static double shooterSpeed=0.0; //Inaccurate. I think we broke the CIMcoder. I wouldn't recommend it anyway.
 	private static ContinuousAngleTracker fusedAngle = new ContinuousAngleTracker();
 	private static double time;
+	private static double iteration=0.0;
 	
 	protected static final Iterate iter = new Iterate(){
 
 		@Override
 		public void init() {
+			RobotMap.spig.reset();
 			reset();
+			iteration=0.0;
 			//fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
-			posX=0.0; posY=0.0; posXNavX=0.0; posYNavX=0.0; lastLeftPos=0.0; lastRightPos=0.0; currentLeftPos=0.0;  currentRightPos=0.0;
+			posX=posY=posXNavX=posYNavX=lastLeftPos=lastRightPos=currentLeftPos=currentRightPos=protectedSpigHeading=spigHeadingOffset=spigHeading=0.0;
 			
 			time = Timer.getFPGATimestamp();
 			//TODO: check if we're just now coming out of auto so we can save any valuable coordinate value
@@ -46,7 +54,8 @@ public class RobotState {
 		@Override
 		public void exec() {
 			synchronized(this){
-				spigHeading=RobotMap.spig.getAngle();
+				protectedSpigHeading=RobotMap.spig.getAngle();
+				spigHeading=protectedSpigHeading-spigHeadingOffset;
 				//fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
 				navxFullHeading = (double)-fusedAngle.getAngle();
 				leftSpeed = DriveTrain.rpmToInchesPerSecond(RobotMap.left1.getSpeed());
@@ -80,6 +89,8 @@ public class RobotState {
 				lastAccelX=accelerationX;
 				lastAccelY=accelerationY;
 				time = Timer.getFPGATimestamp();
+				iteration++;
+				//Timer.delay(.04);
 			}
 		}
 
@@ -91,7 +102,7 @@ public class RobotState {
 	
 	public static void reset(){
 		//fusedAngle.reset();
-		RobotMap.spig.reset();
+		resetGyro();
 		//RobotMap.navxGyro.reset();
 		RobotMap.left1.setEncPosition(0);
 		RobotMap.right1.setEncPosition(0);
@@ -120,7 +131,15 @@ public class RobotState {
 	public static double getRightPos() {
 		return currentRightPos;
 	}
-
+	
+//	public static double getLastLeftPos() {
+//		
+//	}
+//	
+//	public static double getLastRightPos() {
+//		
+//	}
+	
 	public static double getAccelerationX() {
 		return accelerationX;
 	}
@@ -156,5 +175,15 @@ public class RobotState {
 	public static double getShooterSpeed() {
 		return shooterSpeed;
 	}
-
+	public static double getIter(){
+		return iteration;
+	}
+	public static void resetGyro(){
+		//System.out.println("Gyro has been reset");
+		spigHeadingOffset=protectedSpigHeading;
+	}
+	public static double getProtectedHeading(){
+		//"protected" just means you cannot set its value
+		return protectedSpigHeading;
+	}
 }

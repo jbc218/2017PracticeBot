@@ -24,8 +24,8 @@ public class Climber {
 				while(OI.thirdStick.getRawButton(OI.climberForwardToggle));
 			}
 			if(OI.thirdStick.getRawButton(OI.climberBackwardToggle)){
-				RobotMap.climbControl.set(-1-RobotMap.climbControl.get()); //if 0, -1, if -1, 0
-				while(OI.thirdStick.getRawButton(OI.climberBackwardToggle));
+				//RobotMap.climbControl.set(-1-RobotMap.climbControl.get()); //if 0, -1, if -1, 0
+				//while(OI.thirdStick.getRawButton(OI.climberBackwardToggle));
 			}
 		}
 

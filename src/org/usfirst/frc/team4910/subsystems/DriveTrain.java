@@ -61,6 +61,7 @@ public class DriveTrain {
 	private ContinuousAngleTracker fusedAngle = new ContinuousAngleTracker();
 	private boolean reverse=false;
 	private double posX=0.0, posY=0.0, posXNavX=0.0, posYNavX=0.0, lastLeftEncPos=0.0, lastRightEncPos=0.0;
+	private double robotStateLastIter=0.0;
 	private final Iterate iter = new Iterate(){
         private boolean stateChanged;
         
@@ -77,6 +78,7 @@ public class DriveTrain {
 			posYNavX=0.0;
 			lastLeftEncPos=0.0;
 			lastRightEncPos=0.0;
+			robotStateLastIter=RobotState.getIter();
 			hasIterated=false;
 		}
 
@@ -84,6 +86,7 @@ public class DriveTrain {
 		public void exec() {
 			synchronized(DriveTrain.this){
 				double now = Timer.getFPGATimestamp();
+				//Timer.delay(.04);
 				if(OI.leftStick.getRawButton(OI.ReverseDrive)){
 					while(OI.leftStick.getRawButton(OI.ReverseDrive));
 					reverse=!reverse;
@@ -166,7 +169,7 @@ public class DriveTrain {
 		setpointRight = reverse && !headingMode ? OI.leftStick.getY() : setpointRight;
 		double G=0.0;
 		if(headingMode){
-			G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
+			G=RobotMap.driveGyroPID.calculate(RobotState.getSpigHeading());
 		}
 		drive(setpointLeft-G,setpointRight+G);
 		switch(wantedState){
@@ -185,8 +188,12 @@ public class DriveTrain {
 		}
 	}
 	private synchronized DriveControlState handlePosition(){
-		drive(RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos()), 
-				RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos()));
+		if(RobotState.getIter()!=robotStateLastIter){
+			drive(RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos()), 
+					RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos()));
+		}
+		Timer.delay(.05);
+		robotStateLastIter=RobotState.getIter();
 //		if(trajectoryMode){
 //			double dAngle = Pathfinder.boundHalfDegrees(Pathfinder.r2d(leftEF.getHeading())-RobotMap.spig.getAngle());
 //			double turn = 0.8*(-1/80.0)*dAngle;
@@ -214,13 +221,17 @@ public class DriveTrain {
 	}
 	private synchronized DriveControlState handleVelocity(){
 		if(headingMode){
-			double G=RobotMap.driveGyroPID.calculate(RobotMap.spig.getAngle());
+			double G=RobotMap.driveGyroPID.calculate(RobotState.getSpigHeading());
 			System.out.println("Gyro output: "+G);
-			RobotMap.driveVelocityLeftPID.setSetpoint((setpointLeft-RobotMap.leftMaxIPS*G));
-			RobotMap.driveVelocityRightPID.setSetpoint((setpointRight+RobotMap.rightMaxIPS*G));
+			//RobotMap.driveVelocityLeftPID.setSetpoint((setpointLeft-RobotMap.leftMaxIPS*G));
+			//RobotMap.driveVelocityRightPID.setSetpoint((setpointRight+RobotMap.rightMaxIPS*G));
+			drive(-G,+G);
+			Timer.delay(.05);
+		}else{
+			double LVOut=RobotMap.driveVelocityLeftPID.calculate(RobotState.getLeftSpeed()), RVOut=RobotMap.driveVelocityRightPID.calculate(RobotState.getRightSpeed());
+			drive(LVOut,RVOut);
+			System.out.println("Total Outputs: "+LVOut+", "+RVOut);
 		}
-		drive(RobotMap.driveVelocityLeftPID.calculate(RobotState.getLeftSpeed()),
-				RobotMap.driveVelocityRightPID.calculate(RobotState.getRightSpeed()));
 //		Timer.delay(.1);
 		switch(wantedState){
 		case regular:
@@ -288,7 +299,7 @@ public class DriveTrain {
 	}
 	public synchronized void disableHeadingMode(){
 		headingMode=false;
-		RobotMap.spig.reset();
+		RobotState.resetGyro();
 		resetAll();
 	}
 	public synchronized double[] getSetpoints(){
@@ -310,7 +321,7 @@ public class DriveTrain {
 	}
 	public synchronized void resetAll(){
 		fusedAngle.reset();
-		RobotMap.spig.reset();
+		RobotState.resetGyro();
 		RobotMap.left1.setPosition(0);
 		RobotMap.right1.setPosition(0);
 		RobotMap.drivePositionLeftPID.reset();
@@ -329,7 +340,7 @@ public class DriveTrain {
 			}
 		}
         SmartDashboard.putNumber("SPI gyro center", RobotMap.spig.getCenter());
-        SmartDashboard.putNumber("heading error", setpointHeading-RobotMap.spig.getAngle());
+        SmartDashboard.putNumber("heading error", setpointHeading-RobotState.getSpigHeading());
         SmartDashboard.putNumber("battery voltage", DriverStation.getInstance().getBatteryVoltage());
         SmartDashboard.putNumber("Loop time", time);
 
@@ -463,7 +474,8 @@ public class DriveTrain {
 	        map.put("kGI", i);
 	        map.put("kGD", d);
 	        map.put("Voltage", DriverStation.getInstance().getBatteryVoltage());
-	        map.put("Heading", RobotMap.spig.getAngle());
+	        map.put("Heading", RobotState.getSpigHeading());
+	        map.put("FullHeading", RobotState.getProtectedHeading());
 	        map.put("HeadingSetpoint", setpointHeading);
 	        map.put("LeftOutput", leftOut);
 	        map.put("RightOutput", -rightOut);
@@ -527,51 +539,51 @@ public class DriveTrain {
 	 * 
 	 * This should only be used when tuning PID values.
 	 */
-	public void updatePID(){
-		double p,i,d,f1,f2, minOut, maxOut, IZoneMin, IZoneMax;
-		if(getCurrentState()==DriveControlState.velocity){
-			p=SmartDashboard.getNumber("kP", RobotMap.driveVelocityLeftPID.getP());
-        	i=SmartDashboard.getNumber("kI", RobotMap.driveVelocityLeftPID.getI());
-        	d=SmartDashboard.getNumber("kD", RobotMap.driveVelocityLeftPID.getD());
-        	f1=SmartDashboard.getNumber("kFL", RobotMap.driveVelocityLeftPID.getF());
-        	f2=SmartDashboard.getNumber("kFR", RobotMap.driveVelocityRightPID.getF());
-        	minOut=SmartDashboard.getNumber("outputMin", RobotMap.driveVelocityLeftPID.getMinOut());
-        	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.driveVelocityLeftPID.getMaxOut());
-        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.driveVelocityLeftPID.getIZoneMin());
-        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.driveVelocityLeftPID.getIZoneMax());
-        	
-        	RobotMap.driveVelocityLeftPID.setOutputRange(minOut, maxOut);
-        	RobotMap.driveVelocityRightPID.setOutputRange(minOut, maxOut);
-        	RobotMap.driveVelocityLeftPID.setPIDF(p, i, d, f1);
-        	RobotMap.driveVelocityRightPID.setPIDF(p, i, d, f2);
-        	RobotMap.driveVelocityLeftPID.setIZoneRange(IZoneMin,IZoneMax);
-        	RobotMap.driveVelocityRightPID.setIZoneRange(IZoneMin,IZoneMax);
-		}else{
-			p=SmartDashboard.getNumber("kP", RobotMap.drivePositionLeftPID.getP());
-        	i=SmartDashboard.getNumber("kI", RobotMap.drivePositionLeftPID.getI());
-        	d=SmartDashboard.getNumber("kD", RobotMap.drivePositionLeftPID.getD());
-        	f1=SmartDashboard.getNumber("kFL", RobotMap.drivePositionLeftPID.getF());
-        	f2=SmartDashboard.getNumber("kFR", RobotMap.drivePositionRightPID.getF());
-        	minOut=SmartDashboard.getNumber("outputMin", RobotMap.drivePositionLeftPID.getMinOut());
-        	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.drivePositionLeftPID.getMaxOut());
-        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.drivePositionLeftPID.getIZoneMin());
-        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.drivePositionLeftPID.getIZoneMax());
-        	
-        	RobotMap.drivePositionLeftPID.setOutputRange(minOut, maxOut);
-        	RobotMap.drivePositionRightPID.setOutputRange(minOut, maxOut);
-        	RobotMap.drivePositionLeftPID.setPIDF(p, i, d, f1);
-        	RobotMap.drivePositionRightPID.setPIDF(p, i, d, f2);
-        	RobotMap.drivePositionLeftPID.setIZoneRange(IZoneMin,IZoneMax);
-        	RobotMap.drivePositionRightPID.setIZoneRange(IZoneMin,IZoneMax);
-		}
-		p=SmartDashboard.getNumber("kGP", RobotMap.driveGyroPID.getP());
-    	i=SmartDashboard.getNumber("kGI", RobotMap.driveGyroPID.getI());
-    	d=SmartDashboard.getNumber("kGD", RobotMap.driveGyroPID.getD());
-    	IZoneMin=SmartDashboard.getNumber("kGIZoneMin", RobotMap.driveGyroPID.getIZoneMin());
-    	IZoneMax=SmartDashboard.getNumber("kGIZoneMax", RobotMap.driveGyroPID.getIZoneMax());
-    	RobotMap.driveGyroPID.setPID(p, i, d);
-    	RobotMap.driveGyroPID.setIZoneRange(IZoneMin,IZoneMax);
-    	RobotMap.left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
-    	RobotMap.right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
-	}
+//	public void updatePID(){
+//		double p,i,d,f1,f2, minOut, maxOut, IZoneMin, IZoneMax;
+//		if(getCurrentState()==DriveControlState.velocity){
+//			p=SmartDashboard.getNumber("kP", RobotMap.driveVelocityLeftPID.getP());
+//        	i=SmartDashboard.getNumber("kI", RobotMap.driveVelocityLeftPID.getI());
+//        	d=SmartDashboard.getNumber("kD", RobotMap.driveVelocityLeftPID.getD());
+//        	f1=SmartDashboard.getNumber("kFL", RobotMap.driveVelocityLeftPID.getF());
+//        	f2=SmartDashboard.getNumber("kFR", RobotMap.driveVelocityRightPID.getF());
+//        	minOut=SmartDashboard.getNumber("outputMin", RobotMap.driveVelocityLeftPID.getMinOut());
+//        	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.driveVelocityLeftPID.getMaxOut());
+//        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.driveVelocityLeftPID.getIZoneMin());
+//        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.driveVelocityLeftPID.getIZoneMax());
+//        	
+//        	RobotMap.driveVelocityLeftPID.setOutputRange(minOut, maxOut);
+//        	RobotMap.driveVelocityRightPID.setOutputRange(minOut, maxOut);
+//        	RobotMap.driveVelocityLeftPID.setPIDF(p, i, d, f1);
+//        	RobotMap.driveVelocityRightPID.setPIDF(p, i, d, f2);
+//        	RobotMap.driveVelocityLeftPID.setIZoneRange(IZoneMin,IZoneMax);
+//        	RobotMap.driveVelocityRightPID.setIZoneRange(IZoneMin,IZoneMax);
+//		}else{
+//			p=SmartDashboard.getNumber("kP", RobotMap.drivePositionLeftPID.getP());
+//        	i=SmartDashboard.getNumber("kI", RobotMap.drivePositionLeftPID.getI());
+//        	d=SmartDashboard.getNumber("kD", RobotMap.drivePositionLeftPID.getD());
+//        	f1=SmartDashboard.getNumber("kFL", RobotMap.drivePositionLeftPID.getF());
+//        	f2=SmartDashboard.getNumber("kFR", RobotMap.drivePositionRightPID.getF());
+//        	minOut=SmartDashboard.getNumber("outputMin", RobotMap.drivePositionLeftPID.getMinOut());
+//        	maxOut=SmartDashboard.getNumber("outputMax", RobotMap.drivePositionLeftPID.getMaxOut());
+//        	IZoneMin=SmartDashboard.getNumber("IZoneMin", RobotMap.drivePositionLeftPID.getIZoneMin());
+//        	IZoneMax=SmartDashboard.getNumber("IZoneMax", RobotMap.drivePositionLeftPID.getIZoneMax());
+//        	
+//        	RobotMap.drivePositionLeftPID.setOutputRange(minOut, maxOut);
+//        	RobotMap.drivePositionRightPID.setOutputRange(minOut, maxOut);
+//        	RobotMap.drivePositionLeftPID.setPIDF(p, i, d, f1);
+//        	RobotMap.drivePositionRightPID.setPIDF(p, i, d, f2);
+//        	RobotMap.drivePositionLeftPID.setIZoneRange(IZoneMin,IZoneMax);
+//        	RobotMap.drivePositionRightPID.setIZoneRange(IZoneMin,IZoneMax);
+//		}
+//		p=SmartDashboard.getNumber("kGP", RobotMap.driveGyroPID.getP());
+//    	i=SmartDashboard.getNumber("kGI", RobotMap.driveGyroPID.getI());
+//    	d=SmartDashboard.getNumber("kGD", RobotMap.driveGyroPID.getD());
+//    	IZoneMin=SmartDashboard.getNumber("kGIZoneMin", RobotMap.driveGyroPID.getIZoneMin());
+//    	IZoneMax=SmartDashboard.getNumber("kGIZoneMax", RobotMap.driveGyroPID.getIZoneMax());
+//    	RobotMap.driveGyroPID.setPID(p, i, d);
+//    	RobotMap.driveGyroPID.setIZoneRange(IZoneMin,IZoneMax);
+//    	RobotMap.left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
+//    	RobotMap.right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
+//	}
 }

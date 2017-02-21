@@ -24,8 +24,8 @@ public class Shooter {
 	}
 	private ShooterState currentState=ShooterState.Idle;
 	private double loadingStart=0;
-	private double shootingStart=0;
-	private double shootKp=0.0;
+//	private double shootingStart=0;
+//	private double shootKp=0.0;
 	//private double setpoint=SmartDashboard.getNumber("ShootSetpoint", 0.0);
 	private final Iterate iter = new Iterate(){
 		
@@ -35,7 +35,7 @@ public class Shooter {
 			RobotMap.shootGuide.set(0);
 			currentState=ShooterState.Idle;
 			loadingStart=0;
-			shootingStart=0;
+			//shootingStart=0;
 			RobotMap.shootPID.setPIDF(0.003, 1.3E-5, 0.0, 8.0E-4);
 		}
 
@@ -45,7 +45,7 @@ public class Shooter {
 			synchronized(Shooter.this){
 				ShooterState newState;
 				//SmartDashboard.putNumber("ShootSetpoint", setpoint);
-				shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
+				//shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
 				if(OI.rightStick.getRawButton(1) && currentState!=ShooterState.Idle){
 					while(OI.rightStick.getRawButton(1)){
 						RobotMap.shootControl.set(0);
@@ -132,7 +132,7 @@ public class Shooter {
 					System.out.println("Shooter state changed to: "+newState);
 					currentState=newState;
 					if(newState==ShooterState.Shooting){
-						shootingStart=Timer.getFPGATimestamp();
+						//shootingStart=Timer.getFPGATimestamp();
 					}
 				}
 			}

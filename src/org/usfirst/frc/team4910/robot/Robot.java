@@ -59,6 +59,7 @@ public class Robot extends IterativeRobot {
         	iteratorEnabled.register(elev.getLoop());
         	iteratorEnabled.register(vision.getLoop());
         	iteratorEnabled.register(climb.getLoop());
+        	iteratorDisabled.register(RobotState.iter);
         	iteratorDisabled.register(new GyroCalibrator());
         	resetAllSensors();
         	
@@ -178,7 +179,7 @@ public class Robot extends IterativeRobot {
         	System.out.println("Testing");
         	closeLoopTime=0;
         	drive.disableHeadingMode();
-        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear because it's just easier
+        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
         	RobotMap.shootControl.setEncPosition(0);
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
@@ -188,6 +189,16 @@ public class Robot extends IterativeRobot {
     
     public void teleopPeriodic() {
         try{
+        	if(OI.rightStick.getRawButton(OI.AutoTest)){
+        		while(OI.rightStick.getRawButton(OI.AutoTest));
+        		pat.setPositionTimeThresh(7.5);
+        		pat.register(Path.PathType.Position, -(84-14.5));
+        		pat.register(Path.PathType.Heading, -57.0);
+        		pat.Iterate();
+        		pat.setPositionTimeThresh(30.0);
+        		Timer.delay(.5);
+        		trackAndMove();
+        	}
         	if(RobotMap.testerCodeEnabled){
         		testerCode();
         	}
@@ -202,7 +213,16 @@ public class Robot extends IterativeRobot {
 				while(OI.rightStick.getRawButton(OI.GearShiftToggle));
 				
 			}
-
+			if(OI.rightStick.getRawButton(OI.Gates)){
+				if(RobotMap.gates.get().equals(DoubleSolenoid.Value.kForward)){
+					RobotMap.gates.set(DoubleSolenoid.Value.kReverse);
+					System.out.println("Gates closed, I think");
+				}else{
+					RobotMap.gates.set(DoubleSolenoid.Value.kForward);
+					System.out.println("Gates opened, I think");
+				}
+				while(OI.rightStick.getRawButton(OI.Gates));
+			}
 			if(OI.rightStick.getRawButton(OI.CompressorToggle)){
 				while(OI.rightStick.getRawButton(OI.CompressorToggle));
 				if(compressorEnabled){
@@ -245,7 +265,7 @@ public class Robot extends IterativeRobot {
     public void resetAllSensors(){
     	RobotMap.left1.setPosition(0);
     	RobotMap.right1.setPosition(0);
-    	RobotMap.spig.reset();
+    	RobotState.resetGyro();
     }
     public void writeAllToCSV(){
         RobotMap.writer.writeNext(drive.valString().split("#"), false);
@@ -274,7 +294,7 @@ public class Robot extends IterativeRobot {
     	}
     }
     /**
-     * Any code I use for testing subsystems goes here, so that we don't destroy the rio CPU
+     * Any code I use for testing subsystems goes here, so that we don't destroy the rio CPU during comp
      * 
      * 
      */
@@ -282,15 +302,17 @@ public class Robot extends IterativeRobot {
     	//RobotMap.shootControl.set(OI.thirdStick.getY());
     	//SmartDashboard.putNumber("ShooterSpeed", RobotState.getShooterSpeed());
     	//SmartDashboard.putNumber("ShooterPosition", RobotMap.shootControl.getEncPosition());
-    	System.out.println(((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0); //For anyone looking at this code, add +9 to get actual inches to it
+    	//System.out.println(((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0); //For anyone looking at this code, add +9 to get actual inches to it
+    	if(OI.rightStick.getRawButton(OI.ResetGyro))
+    		RobotState.resetGyro();
     	if(OI.rightStick.getRawButton(OI.PIDDistTest)){
     		while(OI.rightStick.getRawButton(OI.PIDDistTest));
-    		pat.register(PathType.Position, -40.0);
+    		pat.register(PathType.Position, -80.0);
     		pat.Iterate();
     	}
     	if(OI.rightStick.getRawButton(OI.PIDAngleTest)){
     		while(OI.rightStick.getRawButton(OI.PIDAngleTest));
-    		pat.register(PathType.Heading, 60.0);
+    		pat.register(PathType.Heading, 15.0);
     		pat.Iterate();
     	}
     	if(OI.leftStick.getRawButton(OI.shooterPIDTest)){
@@ -428,9 +450,9 @@ public class Robot extends IterativeRobot {
     	
     	//correct angle
 		vision.startPegTracking();
-		while(vision.getCurrentIteration()<=14);
+		while(vision.getCurrentIteration()<=6);
 		double ang = -vision.getAveragePegAngle();
-		double dist= -vision.getAveragePegDistance();
+		double dist= ((-vision.getAveragePegDistance())-((76.234-14.5)))/2.0;
 		vision.stopPegTracking();
 		pat.register(PathType.Heading, ang);
 		pat.Iterate();
@@ -451,7 +473,7 @@ public class Robot extends IterativeRobot {
 		
 		//correct angle
 		vision.startPegTracking();
-		while(vision.getCurrentIteration()<=7);
+		while(vision.getCurrentIteration()<=3);
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
 		pat.register(PathType.Heading, ang);
@@ -472,7 +494,7 @@ public class Robot extends IterativeRobot {
 		
 		//correct angle
 		vision.startPegTracking();
-		while(vision.getCurrentIteration()<=7);
+		while(vision.getCurrentIteration()<=3);
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
 		pat.register(PathType.Heading, ang);
@@ -494,10 +516,10 @@ public class Robot extends IterativeRobot {
 		
 		//correct angle
 		vision.startPegTracking();
-		while(vision.getCurrentIteration()<=7);
+		while(vision.getCurrentIteration()<=3);
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
-		pat.register(PathType.Heading, 1.15*ang);
+		pat.register(PathType.Heading, 1.1*ang);
 		pat.Iterate();
 		RobotMap.left1.setEncPosition(0);
 		RobotMap.right1.setEncPosition(0);

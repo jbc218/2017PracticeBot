@@ -41,8 +41,8 @@ public class SynchronousPID {
                                      // deadband
                                      // then treat error for the proportional
                                      // term as 0
-    private double m_outputDirection=1.0; // multiplies the output by 1 or -1
-    private double m_inputDirection=1.0; // multiplies the sensor reading by 1 or -1
+    private int m_outputDirection=1; // multiplies the output by 1 or -1
+    private int m_inputDirection=1; // multiplies the sensor reading by 1 or -1
     private double m_errSample=0.0;
     private double m_startTime=0.0;
     private double m_errTolerance=0.0;
@@ -96,40 +96,43 @@ public class SynchronousPID {
      *            the input
      */
     public double calculate(double input) {
-        m_last_input = m_inputDirection*input;
-        m_error = m_setpoint - m_last_input;
-        if (m_continuous) {
-            if (Math.abs(m_error) > (m_maximumInput - m_minimumInput) / 2) {
-                if (m_error > 0) {
-                    m_error = m_error - m_maximumInput + m_minimumInput;
-                } else {
-                    m_error = m_error + m_maximumInput - m_minimumInput;
-                }
-            }
-        }
-        if(m_error<m_errTolerance)
-        	m_errSample++;
-        else
-        	m_errSample=0;
-        
-        if (/*(Math.abs(m_error) * m_P <= m_maximumOutput) && (Math.abs(m_error) * m_P >= m_minimumOutput) &&*/ (Math.abs(m_error)<m_IZoneMax && Math.abs(m_error)>m_IZoneMin)) {
-            m_totalError += m_error;
-        } else {
-            m_totalError = 0;
-        }
-
-        // Don't blow away m_error so as to not break derivative
-        double proportionalError = Math.abs(m_error) < m_deadband ? 0 : m_error;
-        m_result = (m_P * proportionalError + m_I * m_totalError + m_D * (m_error - m_prevError) + m_F * m_setpoint);
-        m_prevError = m_error;
-
-        if (m_result > m_maximumOutput) {
-            m_result = m_maximumOutput;
-        } else if (m_result < m_minimumOutput) {
-            m_result = m_minimumOutput;
-        }
-        //Timer.delay(.05);
-        return m_outputDirection*m_result;
+    	synchronized(this){
+	        m_last_input = m_inputDirection*input;
+	        m_error = m_setpoint - m_last_input;
+	        if (m_continuous) {
+	            if (Math.abs(m_error) > (m_maximumInput - m_minimumInput) / 2) {
+	                if (m_error > 0) {
+	                    m_error = m_error - m_maximumInput + m_minimumInput;
+	                } else {
+	                    m_error = m_error + m_maximumInput - m_minimumInput;
+	                }
+	            }
+	        }
+	        if(m_error<m_errTolerance)
+	        	m_errSample++;
+	        else
+	        	m_errSample=0;
+	        
+	        if (/*(Math.abs(m_error) * m_P <= m_maximumOutput) && (Math.abs(m_error) * m_P >= m_minimumOutput) &&*/ (Math.abs(m_error)<m_IZoneMax && Math.abs(m_error)>m_IZoneMin)) {
+	            m_totalError += m_error;
+	        } else {
+	            m_totalError = 0;
+	        }
+	
+	        // Don't blow away m_error so as to not break derivative
+	        double proportionalError = Math.abs(m_error) < m_deadband ? 0 : m_error;
+	        m_result = (m_P * proportionalError + m_I * m_totalError + m_D * (m_error - m_prevError) + m_F * m_setpoint);
+	        //System.out.println((m_error - m_prevError));
+	        m_prevError = m_error;
+	
+	        if (m_result > m_maximumOutput) {
+	            m_result = m_maximumOutput;
+	        } else if (m_result < m_minimumOutput) {
+	            m_result = m_minimumOutput;
+	        }
+	        //Timer.delay(.05);
+	        return m_outputDirection*m_result;
+    	}
     }
 
     /**
@@ -359,7 +362,7 @@ public class SynchronousPID {
         return m_last_input != Double.NaN && Math.abs(m_last_input - m_setpoint) < tolerance;
     }
     public boolean onTarget() {
-        return m_errSample>20 && m_setpoint!=0 && Timer.getFPGATimestamp()-m_startTime>m_minimumTimeToRun 
+        return m_errSample>10 && m_setpoint!=0 && Timer.getFPGATimestamp()-m_startTime>m_minimumTimeToRun 
         		&& m_last_input!=Double.NaN && Math.abs(m_last_input - m_setpoint) < m_errTolerance;
     }
     public void setTolerance(double tol){
