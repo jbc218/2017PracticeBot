@@ -28,8 +28,10 @@ public class RobotMap {
 	public static BuiltInAccelerometer RIOAccel;
 	public static AnalogInput ultra;
 	
+	public static final boolean isCompBot=true;
+	
 	public static final double DriveWheelDiameter=6;
-	public static final double EncCountsPerRev=4096;
+	public static final double EncCountsPerRev= isCompBot ? 1440 : 4096; //4096 for practice bot, 1440 for compbot
 	public static final double rightMinIPS=-210.0;
 	public static final double rightMaxIPS=210.0;
 	public static final double leftMinIPS=-210.0;
@@ -40,27 +42,29 @@ public class RobotMap {
 	public static final double rightMaxIPSPS=982.7519404608955;
 	
 	//Position, velocity, and gyro PIDF values are all for high gear only
-	public static final double PositionKp=0.0125; //0.0155
-	public static final double PositionKi=0.0002;//0.000075; 
-	public static final double PositionKd=0.04;
+	public static final double PositionKp=0.034; //0.0125
+	public static final double PositionKi=0.0;//0.0002; 
+	public static final double PositionKd=0.0; //0.04
 	public static final double PositionKf=0.0;
-	public static final double VelocityKp=.0006;
+	public static final double VelocityKp=.0006; //Unused valuess
 	public static final double VelocityKi=0.00026;
 	public static final double VelocityKd=0.0;
 	public static final double VelocityKf1=0.0053;
 	public static final double VelocityKf2=0.0053;
-	public static final double GyroKp=0.011; //0.0325
-	public static final double GyroKi=0.0035; //0.0013
-	public static final double GyroKd=0.01; //1.0
+	public static final double GyroKp=0.03; //0.0325 (high gear)
+	public static final double GyroKi=0.0; //0.0013
+	public static final double GyroKd=0.0255; //1.0
 	
-	public static final double GyroSmallKp=0.0;
-	public static final double GyroSmallKi=0.0;
-	public static final double GyroSmallKd=0.0;
+	//Our solution for not needing this was just starting in low gear
+	//Apparently, the shifter gears actually have a use for me.
+//	public static final double GyroSmallKp=0.0;
+//	public static final double GyroSmallKi=0.0;
+//	public static final double GyroSmallKd=0.0;
 	
-	public static final double shooterKp=0.003;
-	public static final double shooterKi=1.3E-5;
+	public static final double shooterKp= isCompBot ? 0.04186 : .003; //.003
+	public static final double shooterKi= isCompBot ? 1.81395E-4 : 1.3E-5; //1.3E-5
 	public static final double shooterKd=0.0;
-	public static final double shooterKf=8.0E-4;
+	public static final double shooterKf= isCompBot ? 0.011627 : 8.0E-4;//8.0E-4;
 	public static final double shooterGuideKp=0.0;
 	public static final double shooterGuideKd=0.0;
 	public static final double shooterGuideKf=0.0;
@@ -69,8 +73,14 @@ public class RobotMap {
 	public static final double shooterSpinupTime=2.2;
 	public static final double shooterTimeToShoot=60.0;
 	
-	public static final boolean testerCodeEnabled=true;
-	public static final double VelocityRampRate=testerCodeEnabled ? 32.0 : 0.0 ;
+	public static final String PegIP = isCompBot ? "10.49.10.42" : "10.49.10.40";
+	public static final String ShooterIP = isCompBot ? "10.49.10.44" : "10.49.10.62";
+	
+	public static final boolean testerCodeEnabled=false; //This enables functions like writing data down to a CSV file, or
+														//putting (more) data on SmartDashboard, or anything involving tuning
+														//pid loops. Running this code would be rather intense for a competition
+														//and could therefore cause misclicks or other code-based problems to occur.
+	public static final double VelocityRampRate=0.0;
 	
 	public static void init(){
 		left1 = new CANTalon(1);
@@ -83,8 +93,8 @@ public class RobotMap {
 		shootControl = new CANTalon(8);
 		
 		ultra = new AnalogInput(0);
-		gearShifter = new DoubleSolenoid(4,5);
-		gates = new DoubleSolenoid(6,7);
+		gearShifter = isCompBot ? new DoubleSolenoid(7,6) : new DoubleSolenoid(4,5) ; //4,5 on practice bot
+		gates = isCompBot ? new DoubleSolenoid(4,5) : new DoubleSolenoid(6,7); //6,7 on comp bot
 		spig = new GyroHelper(SPI.Port.kOnboardCS0);
 		//navxGyro = new AHRS(SPI.Port.kMXP);
 		RIOAccel = new BuiltInAccelerometer();
@@ -98,8 +108,9 @@ public class RobotMap {
         right1.set(0);
         right2.changeControlMode(CANTalon.TalonControlMode.Follower);
         right2.set(right1.getDeviceID());
+        shootControl.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         shootControl.setStatusFrameRateMs(CANTalon.StatusFrameRate.Feedback, 10);
-        shootControl.setVoltageRampRate(24);
+        shootControl.setVoltageRampRate(30);
         shootControl.setEncPosition(0);
         c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match    
         c.setClosedLoopControl(false);
@@ -115,17 +126,17 @@ public class RobotMap {
         left1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         shootControl.configEncoderCodesPerRev(75);
-        //practice bot
-//        left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
-//        right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
         
-        //comp bot
-        left1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
-        right1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
-        
-        
-    	left1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
-    	right1.setVoltageRampRate(SmartDashboard.getNumber("kR",RobotMap.VelocityRampRate));
+
+        if(isCompBot){
+        	left1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
+        	right1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
+        }else{
+        	left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+        	right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+        }  
+    	left1.setVoltageRampRate(0);
+    	right1.setVoltageRampRate(0);
         shootControl.setVoltageRampRate(24);
     	RobotMap.driveGyroPID.setIZoneRange(.1,12.0);
     	RobotMap.drivePositionLeftPID.setIZoneRange(0.0,6.0);

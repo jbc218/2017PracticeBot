@@ -29,7 +29,7 @@ public class RobotState {
 	private static double spigHeadingOffset=0.0; //Value heading is subtracted by (when reset)
 	private static double protectedSpigHeading=0.0;//This can only be zeroed at the beginning of the match
 												//or whenever enabled, otherwise it will always give a full heading
-	
+	private static double protectedLeftEnc=0.0, protectedRightEnc=0.0, leftEncOffset=0.0, rightEncOffset=0.0;
 	
 	private static double shooterSpeed=0.0; //Inaccurate. I think we broke the CIMcoder. I wouldn't recommend it anyway.
 	private static ContinuousAngleTracker fusedAngle = new ContinuousAngleTracker();
@@ -40,12 +40,15 @@ public class RobotState {
 
 		@Override
 		public void init() {
+			RobotMap.left1.setEncPosition(0);
+			RobotMap.right1.setEncPosition(0);
 			RobotMap.spig.reset();
 			reset();
 			iteration=0.0;
 			//fusedAngle.setAngleAdjustment(RobotMap.navxGyro.getFusedHeading());
 			posX=posY=posXNavX=posYNavX=lastLeftPos=lastRightPos=currentLeftPos=currentRightPos=protectedSpigHeading=spigHeadingOffset=spigHeading=0.0;
-			
+			protectedLeftEnc=protectedRightEnc=0.0; //Implement later
+			leftEncOffset=rightEncOffset=0.0;
 			time = Timer.getFPGATimestamp();
 			//TODO: check if we're just now coming out of auto so we can save any valuable coordinate value
 			//low priority - auto is the only real time where coordinates matter
@@ -55,30 +58,33 @@ public class RobotState {
 		public void exec() {
 			synchronized(this){
 				protectedSpigHeading=RobotMap.spig.getAngle();
+				protectedLeftEnc = DriveTrain.countsToInches(-RobotMap.left1.getEncPosition());
+				protectedRightEnc = DriveTrain.countsToInches(RobotMap.right1.getEncPosition());
 				spigHeading=protectedSpigHeading-spigHeadingOffset;
 				//fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
 				navxFullHeading = (double)-fusedAngle.getAngle();
 				leftSpeed = DriveTrain.rpmToInchesPerSecond(RobotMap.left1.getSpeed());
 				rightSpeed = DriveTrain.rpmToInchesPerSecond(RobotMap.right1.getSpeed());
-				currentLeftPos = DriveTrain.countsToInches(-RobotMap.left1.getEncPosition());
-				currentRightPos = DriveTrain.countsToInches(RobotMap.right1.getEncPosition());
+				
+				currentLeftPos = protectedLeftEnc-leftEncOffset;
+				currentRightPos = protectedRightEnc-rightEncOffset;
 				accelerationX = 385.827*RobotMap.RIOAccel.getX(); //inches per second^2
 				accelerationY = 385.827*RobotMap.RIOAccel.getY();
 				//shooterSpeed = 600.0*(RobotMap.shootControl.getEncVelocity()/80.0);
-		        shooterSpeed = RobotMap.shootControl.getSpeed();
+		        shooterSpeed = -RobotMap.shootControl.getSpeed();
 				//We want it so that relative to the start, x is left and right, y is up and down.
 		        //Also, the navX gyro is backwards
 		        posY += (Math.cos(Math.toRadians(spigHeading))
-		        		*(currentLeftPos-lastLeftPos+currentRightPos-lastRightPos)/2.0); //I would integrate instead, but for whatever reason
+		        		*(protectedLeftEnc-lastLeftPos+protectedRightEnc-lastRightPos)/2.0); //I would integrate instead, but for whatever reason
 		        																		//position is more accurate than velocity.
 		        posX -= (Math.sin(Math.toRadians(spigHeading))
-		        		*(currentLeftPos-lastLeftPos+currentRightPos-lastRightPos)/2.0);
+		        		*(protectedLeftEnc-lastLeftPos+protectedRightEnc-lastRightPos)/2.0);
 		        posYNavX += (Math.cos(Math.toRadians(navxFullHeading))
-		        		*(currentLeftPos-lastLeftPos+currentRightPos-lastRightPos)/2.0);
+		        		*(protectedLeftEnc-lastLeftPos+protectedRightEnc-lastRightPos)/2.0);
 		        posXNavX -= (Math.sin(Math.toRadians(navxFullHeading))
-		        		*(currentLeftPos-lastLeftPos+currentRightPos-lastRightPos)/2.0);
-		        lastLeftPos=currentLeftPos;
-		        lastRightPos=currentRightPos;
+		        		*(protectedLeftEnc-lastLeftPos+protectedRightEnc-lastRightPos)/2.0);
+		        lastLeftPos=protectedLeftEnc;
+		        lastRightPos=protectedRightEnc;
 		        SmartDashboard.putNumber("PositionX", posX);
 		        SmartDashboard.putNumber("PositionY", posY);
 		        SmartDashboard.putNumber("PositionXNavX", posXNavX);
@@ -123,11 +129,18 @@ public class RobotState {
 	public static double getPosYNavX() {
 		return posYNavX;
 	}
-
+	/**
+	 * 
+	 * @return Left distance in inches
+	 */
 	public static double getLeftPos() {
 		return currentLeftPos;
 	}
 
+	/**
+	 * 
+	 * @return Right distance in inches
+	 */
 	public static double getRightPos() {
 		return currentRightPos;
 	}
@@ -185,5 +198,15 @@ public class RobotState {
 	public static double getProtectedHeading(){
 		//"protected" just means you cannot set its value
 		return protectedSpigHeading;
+	}
+	public static void resetPosition(){
+		leftEncOffset=protectedLeftEnc;
+		rightEncOffset=protectedRightEnc;
+	}
+	public static double getFullLeftPos(){
+		return protectedLeftEnc;
+	}
+	public static double getFullRightPos(){
+		return protectedRightEnc;
 	}
 }

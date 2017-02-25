@@ -91,6 +91,7 @@ public class DriveTrain {
 					while(OI.leftStick.getRawButton(OI.ReverseDrive));
 					reverse=!reverse;
 				}
+				//System.out.println("Output: "+RobotMap.left1.get());
 				//fusedAngle.nextAngle(RobotMap.navxGyro.getFusedHeading());
 //				double curr_world_linear_accel_x = RobotMap.RIOAccel.getX();
 //	        	double currentJerkX = curr_world_linear_accel_x - last_world_linear_accel_x;
@@ -192,7 +193,7 @@ public class DriveTrain {
 			drive(RobotMap.drivePositionLeftPID.calculate(RobotState.getLeftPos()), 
 					RobotMap.drivePositionRightPID.calculate(RobotState.getRightPos()));
 		}
-		Timer.delay(.05);
+		//Timer.delay(.05);
 		robotStateLastIter=RobotState.getIter();
 //		if(trajectoryMode){
 //			double dAngle = Pathfinder.boundHalfDegrees(Pathfinder.r2d(leftEF.getHeading())-RobotMap.spig.getAngle());
@@ -308,12 +309,12 @@ public class DriveTrain {
 	private synchronized void drive(double left, double right){
 		leftOut=-left;
 		rightOut=right;
-        if ( Math.abs(left) < .09 && !headingMode && currentState==DriveControlState.regular) {
+        if ( Math.abs(left) < .1 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.left1.set(0);
         }else{
         	RobotMap.left1.set(-left);
         }
-        if ( Math.abs(right) < .09 && !headingMode && currentState==DriveControlState.regular) {
+        if ( Math.abs(right) < .1 && !headingMode && currentState==DriveControlState.regular) {
         	RobotMap.right1.set(0);
         }else{
         	RobotMap.right1.set(right);
@@ -322,12 +323,13 @@ public class DriveTrain {
 	public synchronized void resetAll(){
 		fusedAngle.reset();
 		RobotState.resetGyro();
-		RobotMap.left1.setPosition(0);
-		RobotMap.right1.setPosition(0);
+		RobotMap.left1.set(0);
+		RobotMap.right1.set(0);
 		RobotMap.drivePositionLeftPID.reset();
 		RobotMap.drivePositionRightPID.reset();
 		RobotMap.driveVelocityLeftPID.reset();
 		RobotMap.driveVelocityRightPID.reset();
+		RobotState.resetPosition(); //setPosition(0)
 		RobotMap.driveGyroPID.reset();
 		headingMode=false;
 	}

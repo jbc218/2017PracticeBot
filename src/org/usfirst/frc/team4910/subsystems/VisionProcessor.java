@@ -187,6 +187,9 @@ public class VisionProcessor {
 		threshold = new Mat();
 		clusters = new Mat();
 		hierarchy = new Mat();
+		camServer = CameraServer.getInstance();
+		axiscam = camServer.addAxisCamera(RobotMap.PegIP);
+		cvs = camServer.getVideo(axiscam);
 		
 	}
 	public static VisionProcessor getInstance(){
@@ -195,17 +198,10 @@ public class VisionProcessor {
 	public synchronized void startPegTracking(){
 		synchronized(VisionProcessor.this){
 			visionState=VisionStates.PegTracking;
-			camServer = CameraServer.getInstance();
-			axiscam = camServer.addAxisCamera("10.49.10.40"); //44 is high goal
-			cvs = camServer.getVideo(axiscam);
 			cvs.setEnabled(true);
-			Timer.delay(.1);
+			Timer.delay(.05); //Delay to make sure it doesn't trip over itself
 			hasEnabled=true;
-			cvs.grabFrame(BGR);
-			captureTime=Timer.getFPGATimestamp(); //this way, distance can be adjusted for current robot pose
-			currentAngle=RobotState.getProtectedHeading();
-			boolean b = Imgcodecs.imwrite("/home/lvuser/pegStartingImage.png", BGR);
-			System.out.println("Able to write image: "+ b);
+			cvs.grabFrame(BGR); //Get an initial frame so exposure doesn't become a problem
 			insideTarget = false;
 		}
 		
@@ -255,24 +251,24 @@ public class VisionProcessor {
 							mMOP2f2.convertTo(contours.get(idx), CvType.CV_32S);
 
 							mMOP2f2.convertTo(approxf1, CvType.CV_32S);
-							Imgproc.drawContours(BGR, contours, idx, WHITE);
+							//Imgproc.drawContours(BGR, contours, idx, WHITE);
 							if(!hasFoundAPeg){
 								rec1 = Imgproc.boundingRect(approxf1);
 								Point recMiddle = new Point(rec1.x+.5*rec1.width,rec1.y+.5*rec1.height);
-								Imgproc.circle(BGR, recMiddle, 2, BLUE);
+								//Imgproc.circle(BGR, recMiddle, 2, BLUE);
 								hasFoundAPeg=true;
 							}else{
 								rec2 = Imgproc.boundingRect(approxf1);
 								Point recMiddle = new Point(rec2.x+.5*rec2.width,rec2.y+.5*rec2.height);
-								Imgproc.circle(BGR, recMiddle, 2, BLUE);
+								//Imgproc.circle(BGR, recMiddle, 2, BLUE);
 								if(Math.min(rec1.tl().x, rec2.tl().x)==rec1.tl().x){
 									totalRect = new Rect(rec1.tl(), rec2.br());
 								}else{
 									totalRect = new Rect(rec2.tl(), rec1.br());
 								}
-								Imgproc.rectangle(BGR, totalRect.br(), totalRect.tl(), GREEN);
+								//Imgproc.rectangle(BGR, totalRect.br(), totalRect.tl(), GREEN);
 								recMiddle = new Point(totalRect.x+.5*totalRect.width,totalRect.y+.5*totalRect.height);
-								Imgproc.circle(BGR, recMiddle, 2, RED);
+								//Imgproc.circle(BGR, recMiddle, 2, RED);
 								break; //no need to go further
 							}
 
@@ -280,7 +276,7 @@ public class VisionProcessor {
 
 
 					}//ends "iterate over contours" loop
-					Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
+					//Imgcodecs.imwrite("/home/lvuser/output"+iteration+".png", BGR);
 					try{
 						double deltaAngle = RobotState.getProtectedHeading()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;

@@ -1,6 +1,5 @@
 #This is code for FRC team 4910, East Cobb Robotics, 2017 practice robot.
-This code will cease to be updated after our competition bot is made. The day of "Final commit" was/will be the day compbot is done.
-Competition bot code should be similar to this code, however that code will not be released until after state competition.
+This repository will likely be updated for the entire competition season. The code works with both our competition and practice bots, such that you switch a boolean in RobotMap.java.
 
 You may also notice that we implement code that pushes a ton of data to a CSV file every iteration. We obviously plan on getting rid of that for compbot, and its only use is to provide testing data for us (using a python script to graph data). Many such functions are just for testing purposes.
 
@@ -16,4 +15,6 @@ CTRLib (CANTalon libraries) - Indirect link: http://www.ctr-electronics.com/hro.
 
 Both the SF2 and NavX libraries are automatically added to the wpilib/user/libs folder on installation. The CANTalon libraries are so large because CTR packed the Hero board libraries in with the rest of the installer.
 
-There's also a pathfinder library but it isn't implemented.
+There's also a pathfinder library but it isn't implemented, and likely won't be in the future. The SF2 library also is not implemented
+
+There is a plotter tool to plot data from a csv file (documented in Robot.java) found in the tools folder. The syntax can be found within the file itself. If you encounter an error when running that script along the lines of "...has too many rows!", open the file and clear the last row. This is due to the robot being disabled while writing to it, which causes the data on the last row to be unfinished.
