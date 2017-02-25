@@ -22,6 +22,7 @@ import org.usfirst.frc.team4910.robot.RobotState;
 
 import edu.wpi.cscore.AxisCamera;
 import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.VideoProperty;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.SerialPort;
@@ -36,14 +37,24 @@ import edu.wpi.first.wpilibj.Timer;
 @SuppressWarnings("unused")
 public class VisionProcessor {
 	private static VisionProcessor instance;
-	private static final double verticalFOV = 67.0;
-	private static final double horizontalFOV = 49.0;
-	private static final double resolutionY=320.0;
-	private static final double resolutionX=240.0;
-	private static final double degPerPixelX = horizontalFOV/resolutionX; //320x240
-	private static final double degPerPixelY = verticalFOV/resolutionY;
-	private static final double centerImgX = 119.5;
-	private static final double centerImgY = 159.5;
+	private static final double verticalFOVPeg = 67.0;
+	private static final double horizontalFOVPeg = 49.0;
+	private static final double resolutionYPeg=320.0; //Our camera is turned on its side, or at least the peg one is
+	private static final double resolutionXPeg=240.0;
+	private static final double degPerPixelXPeg = horizontalFOVPeg/resolutionXPeg; //320x240
+	private static final double degPerPixelYPeg = verticalFOVPeg/resolutionYPeg;
+	private static final double centerImgXPeg = 119.5;
+	private static final double centerImgYPeg = 159.5;
+	
+	private static final double verticalFOVBoiler = 49.0;
+	private static final double horizontalFOVBoiler = 67.0;
+	private static final double resolutionYBoiler=240.0;
+	private static final double resolutionXBoiler=320.0;
+	private static final double degPerPixelXBoiler = horizontalFOVBoiler/resolutionXBoiler; //240x320
+	private static final double degPerPixelYBoiler = verticalFOVBoiler/resolutionYBoiler;
+	private static final double centerImgXBoiler = 159.5;
+	private static final double centerImgYBoiler = 119.5;
+	
 	private static final double pegTapeWidth=2.0; //In inches.
 	private static final double pegTapeHeight=5.0;
 	private static final double pegTapeDistance=6.25; //Distance, in inches, from the tapes
@@ -54,7 +65,7 @@ public class VisionProcessor {
 	
 
 	private static final double optimalShootDistance=102.18;
-	private static final double optimalShootAngle=86.33;
+	private static final double optimalShootAngle=86.33; //angle from horizontal, I think. Subject to change.
 	private static final double heightToGoalCenter=0.0; //distance in inches to the center of the tapes
 	private static final double goalCamFromCenterX=0.0; //from a top view, the base of the triangle from camera position to robot center
 	private static final double goalCamFromCenterY=0.0; //height of that same triangle
@@ -83,26 +94,26 @@ public class VisionProcessor {
 	}
 	
 	private static HashMap<String, VideoProperty> propertyMap = new HashMap<String, VideoProperty>();
-	private static double yawAngleToTargetApproxX(double error){return (error)*degPerPixelX;}
-	private static double yawAngleToTargetApproxY(double error){return (error)*degPerPixelY;}
-	private static final double focalLengthX = resolutionX/(2.0*Math.tan(Math.toRadians((horizontalFOV/2.0))));
-	private static final double focalLengthY = resolutionY/(2.0*Math.tan(Math.toRadians((verticalFOV/2.0))));
+	private static double yawAngleToTargetApproxX(double error){return (error)*degPerPixelXPeg;}
+	private static double yawAngleToTargetApproxY(double error){return (error)*degPerPixelYPeg;}
+	private static final double focalLengthX = resolutionXPeg/(2.0*Math.tan(Math.toRadians((horizontalFOVPeg/2.0))));
+	private static final double focalLengthY = resolutionYPeg/(2.0*Math.tan(Math.toRadians((verticalFOVPeg/2.0))));
 	private static double yawAngleToTarget(double error){return Math.toDegrees(Math.atan((error)/focalLengthX));}
 	private static double pitchAngleToTarget(double error){return Math.toDegrees(Math.atan((error)/focalLengthY));}
 	private static double DistanceToTarget(double error){return heightToPegCenter*focalLengthY/error;}
 	//tan(theta)=height/distance, tan(theta)=err/focalY, distance/height = focalY/err 
-	private static double DistanceToTargetApprox(double error){return heightToPegCenter/Math.tan(Math.toRadians(error*degPerPixelY));}
+	private static double DistanceToTargetApprox(double error){return heightToPegCenter/Math.tan(Math.toRadians(error*degPerPixelYPeg));}
 	//distance=height/tan(theta)
 	private static VideoCapture videoCapture;
 	private static Mat BGR, HSV, blur, threshold, clusters, hierarchy;
 	private static boolean insideTarget = false;
 	private static SerialPort cam;
-	private static CvSink cvs;
+	private static CvSink cvsPeg, cvsBoiler;
 	private static double captureTime;
-	private static AxisCamera axiscam; //shouldn't be used for much
+	private static AxisCamera pegcam, boilercam; //shouldn't be used for much
+	private static CvSource boilerOutput;
 	private static int iteration=0;
 	private static boolean hasEnabled=false;
-	private CameraServer camServer;
 	private static double currentAngle=0.0;
 	private static double currentDistance=0.0;
 	private static double calculatedAngle=0.0;
@@ -142,21 +153,21 @@ public class VisionProcessor {
 		public void exec() {
 			synchronized(VisionProcessor.this){
 				switch(visionState){
-				case Disabled: dysebled:
-					if(OI.leftStick.getRawButton(OI.StartPegTrackingTest)){
+				case Disabled:
+					if(OI.leftStick.getRawButton(OI.StartPegTrackingTest) && RobotMap.testerCodeEnabled){
 						//no need to put a while loop, since next iteration it'll go to PegTracking
 						startPegTracking();
 					}
 					break;
 				case PegTracking:
-					if(OI.leftStick.getRawButton(OI.StopPegTrackingTest)){
+					if(OI.leftStick.getRawButton(OI.StopPegTrackingTest) && RobotMap.testerCodeEnabled){
 						stopPegTracking();
 						break;
 					}
-					itercount++;
 					processPeg();
 					pegAngleSum+=getCalculatedPegAngle();
 					pegDistSum+=getCalculatedPegDistance();
+					itercount++;
 					break;
 				case BoilerTracking:
 					break;
@@ -187,10 +198,11 @@ public class VisionProcessor {
 		threshold = new Mat();
 		clusters = new Mat();
 		hierarchy = new Mat();
-		camServer = CameraServer.getInstance();
-		axiscam = camServer.addAxisCamera(RobotMap.PegIP);
-		cvs = camServer.getVideo(axiscam);
-		
+		//TODO: test to see if this still throws an error
+		pegcam = CameraServer.getInstance().addAxisCamera(RobotMap.PegIP);
+		boilercam = CameraServer.getInstance().addAxisCamera(RobotMap.ShooterIP);
+		cvsPeg = CameraServer.getInstance().getVideo(pegcam);
+		cvsBoiler = CameraServer.getInstance().getVideo(boilercam);
 	}
 	public static VisionProcessor getInstance(){
 		return instance==null ? instance=new VisionProcessor() : instance;
@@ -198,10 +210,10 @@ public class VisionProcessor {
 	public synchronized void startPegTracking(){
 		synchronized(VisionProcessor.this){
 			visionState=VisionStates.PegTracking;
-			cvs.setEnabled(true);
+			cvsPeg.setEnabled(true);
 			Timer.delay(.05); //Delay to make sure it doesn't trip over itself
 			hasEnabled=true;
-			cvs.grabFrame(BGR); //Get an initial frame so exposure doesn't become a problem
+			cvsPeg.grabFrame(BGR); //Get an initial frame so exposure doesn't become a problem
 			insideTarget = false;
 		}
 		
@@ -211,12 +223,12 @@ public class VisionProcessor {
 		synchronized(VisionProcessor.this){
 			visionState=VisionStates.Disabled;
 			itercount=pegDistSum=pegAngleSum=0.0;
-			cvs.setEnabled(false);
+			cvsPeg.setEnabled(false);
 		}
 	}
 	private synchronized void processPeg(){
 		synchronized(VisionProcessor.this){
-			cvs.grabFrame(BGR);
+			cvsPeg.grabFrame(BGR);
 			captureTime=Timer.getFPGATimestamp();
 			currentAngle=RobotState.getProtectedHeading();
 			currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
@@ -280,7 +292,7 @@ public class VisionProcessor {
 					try{
 						double deltaAngle = RobotState.getProtectedHeading()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
-						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgX) + deltaAngle;
+						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgXPeg) + deltaAngle;
 						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
 						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
 						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384)+deltaDistance;
