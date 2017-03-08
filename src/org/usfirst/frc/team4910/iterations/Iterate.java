@@ -1,7 +1,7 @@
 package org.usfirst.frc.team4910.iterations;
 
-public interface Iterate {
+public interface Iterate extends Runnable {
 	public void init();
-	public void exec();
+	public void run();
 	public void end();
 }

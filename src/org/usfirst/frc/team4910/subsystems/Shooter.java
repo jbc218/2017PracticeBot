@@ -25,6 +25,7 @@ public class Shooter {
 	}
 	private ShooterState currentState=ShooterState.Idle;
 	private double loadingStart=0;
+	private static double modifier=  true ? 86.0 : 1200.0;
 //	private double shootingStart=0;
 //	private double shootKp=0.0;
 	//private double setpoint=SmartDashboard.getNumber("ShootSetpoint", 0.0);
@@ -42,10 +43,11 @@ public class Shooter {
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			//TODO: fix all this code
 			synchronized(Shooter.this){
 				Timer.delay(.02);
+
 				ShooterState newState;
 				//SmartDashboard.putNumber("ShootSetpoint", setpoint);
 				//shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
@@ -65,7 +67,7 @@ public class Shooter {
 					RobotMap.shootControl.set(0);
 					RobotMap.shootGuide.set(0);
 					
-					if(OI.thirdStick.getRawButton(OI.ShooterToggle) && Math.abs(RobotState.getShooterSpeed())<.2*86.0){ //.2*1200
+					if(OI.thirdStick.getRawButton(OI.ShooterToggle) && Math.abs(RobotState.getShooterSpeed())<.2*modifier){ //.2*1200
 						RobotMap.shootPID.reset();
 						while(OI.thirdStick.getRawButton(OI.ShooterToggle));
 						newState = ShooterState.Loading;
@@ -79,7 +81,8 @@ public class Shooter {
 	        		RobotMap.shootPID.resetIntegrator();
 					if((Timer.getFPGATimestamp()-loadingStart)<RobotMap.shooterSpinupTime && !OI.thirdStick.getRawButton(OI.ShooterToggle)){
 						//RobotMap.shootControl.set((-.60));
-						RobotMap.shootPID.setSetpoint(-0.5*86.0); //.5*1200
+						RobotMap.shootPID.setSetpoint(-0.55*modifier); //.5*1200
+						SmartDashboard.putNumber("ShootSetpoint", -0.55*modifier);
 						
 		        		
 	        			RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));

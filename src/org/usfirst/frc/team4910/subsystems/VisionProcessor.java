@@ -41,7 +41,7 @@ public class VisionProcessor {
 	private static final double horizontalFOVPeg = 49.0;
 	private static final double resolutionYPeg=320.0; //Our camera is turned on its side, or at least the peg one is
 	private static final double resolutionXPeg=240.0;
-	private static final double degPerPixelXPeg = horizontalFOVPeg/resolutionXPeg; //320x240
+	private static final double degPerPixelXPeg = horizontalFOVPeg/resolutionXPeg; //240x320
 	private static final double degPerPixelYPeg = verticalFOVPeg/resolutionYPeg;
 	private static final double centerImgXPeg = 119.5;
 	private static final double centerImgYPeg = 159.5;
@@ -50,7 +50,7 @@ public class VisionProcessor {
 	private static final double horizontalFOVBoiler = 67.0;
 	private static final double resolutionYBoiler=240.0;
 	private static final double resolutionXBoiler=320.0;
-	private static final double degPerPixelXBoiler = horizontalFOVBoiler/resolutionXBoiler; //240x320
+	private static final double degPerPixelXBoiler = horizontalFOVBoiler/resolutionXBoiler; //320x240
 	private static final double degPerPixelYBoiler = verticalFOVBoiler/resolutionYBoiler;
 	private static final double centerImgXBoiler = 159.5;
 	private static final double centerImgYBoiler = 119.5;
@@ -105,13 +105,13 @@ public class VisionProcessor {
 	private static double DistanceToTargetApprox(double error){return heightToPegCenter/Math.tan(Math.toRadians(error*degPerPixelYPeg));}
 	//distance=height/tan(theta)
 	private static VideoCapture videoCapture;
-	private static Mat BGR, HSV, blur, threshold, clusters, hierarchy;
+	private static Mat BGR, HSV, blur, threshold, clusters, hierarchy, pegRec, boilerRec;
 	private static boolean insideTarget = false;
 	private static SerialPort cam;
 	private static CvSink cvsPeg, cvsBoiler;
 	private static double captureTime;
 	private static AxisCamera pegcam, boilercam; //shouldn't be used for much
-	private static CvSource boilerOutput;
+	private static CvSource pegOutput, boilerOutput;
 	private static int iteration=0;
 	private static boolean hasEnabled=false;
 	private static double currentAngle=0.0;
@@ -119,6 +119,7 @@ public class VisionProcessor {
 	private static double calculatedAngle=0.0;
 	private static double calculatedDistance=0.0;
 	private static double _angle=0.0, _distance=0.0;
+	private static Thread visionThread;
 	private enum VisionStates {
 			Disabled, PegTracking, BoilerTracking;
 	}
@@ -146,18 +147,32 @@ public class VisionProcessor {
 				visionState=VisionStates.Disabled;
 				hasEnabled=false;
 				itercount=pegDistSum=pegAngleSum=0.0;
+				
 			}
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			synchronized(VisionProcessor.this){
 				switch(visionState){
 				case Disabled:
 					if(OI.leftStick.getRawButton(OI.StartPegTrackingTest) && RobotMap.testerCodeEnabled){
 						//no need to put a while loop, since next iteration it'll go to PegTracking
 						startPegTracking();
+						//visionThread.start();
 					}
+//					if(cvsPeg.grabFrame(pegRec) == 0){
+//						pegOutput.notifyError(cvsPeg.getError());
+//					}
+//					if(cvsBoiler.grabFrame(boilerRec) == 0){
+//						boilerOutput.notifyError(cvsBoiler.getError());
+//					}
+//					Imgproc.rectangle(pegRec, new Point(100, 140), new Point(140,180), WHITE);
+//					Imgproc.circle(pegRec, new Point(centerImgXPeg, centerImgYPeg), 3, color);
+//					pegOutput.putFrame(pegRec);
+//					Imgproc.rectangle(boilerRec, new Point(140, 100), new Point(180,140), WHITE);
+//					Imgproc.circle(boilerRec, new Point(centerImgXPeg, centerImgYPeg), 3, color);
+//					boilerOutput.putFrame(boilerRec);
 					break;
 				case PegTracking:
 					if(OI.leftStick.getRawButton(OI.StopPegTrackingTest) && RobotMap.testerCodeEnabled){
@@ -198,11 +213,41 @@ public class VisionProcessor {
 		threshold = new Mat();
 		clusters = new Mat();
 		hierarchy = new Mat();
-		//TODO: test to see if this still throws an error
-		pegcam = CameraServer.getInstance().addAxisCamera(RobotMap.PegIP);
-		boilercam = CameraServer.getInstance().addAxisCamera(RobotMap.ShooterIP);
+		pegRec = new Mat();
+		boilerRec = new Mat();
+		pegcam = CameraServer.getInstance().addAxisCamera("pegcam", RobotMap.PegIP);
+		//boilercam = CameraServer.getInstance().addAxisCamera("boilercam", RobotMap.ShooterIP);
+		pegcam.setResolution(240, 320);
+		//boilercam.setResolution(320, 240);
 		cvsPeg = CameraServer.getInstance().getVideo(pegcam);
-		cvsBoiler = CameraServer.getInstance().getVideo(boilercam);
+		//cvsBoiler = CameraServer.getInstance().getVideo(boilercam);
+		pegOutput = CameraServer.getInstance().putVideo("PegOut", 240, 320);
+		//boilerOutput = CameraServer.getInstance().putVideo("BoilerOut", 320, 240);
+		
+		
+		//TODO: test to see if this still throws an error
+//		visionThread = new Thread(() -> {
+//			while (!Thread.interrupted() && visionState==VisionStates.PegTracking) {
+//				if (cvsPeg.grabFrame(BGR) == 0) {
+//					pegOutput.notifyError(cvsPeg.getError());
+//					continue;
+//				}
+//				if(OI.leftStick.getRawButton(OI.StopPegTrackingTest) && RobotMap.testerCodeEnabled){
+//					stopPegTracking();
+//					break;
+//				}
+//				processPeg();
+//				pegAngleSum+=getCalculatedPegAngle();
+//				pegDistSum+=getCalculatedPegDistance();
+//				itercount++;
+//				// Give the output stream a new image to display
+//				pegOutput.putFrame(BGR);
+//			}
+//		});
+//		visionThread.setDaemon(true);
+//		visionThread.start();
+		
+		
 	}
 	public static VisionProcessor getInstance(){
 		return instance==null ? instance=new VisionProcessor() : instance;
@@ -215,6 +260,7 @@ public class VisionProcessor {
 			hasEnabled=true;
 			cvsPeg.grabFrame(BGR); //Get an initial frame so exposure doesn't become a problem
 			insideTarget = false;
+			pegAngleSum=pegDistSum=itercount=0;
 		}
 		
 	

@@ -17,7 +17,7 @@ public class Climber {
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			//If this turns out to be backwards, switch the button numbers
 			if(OI.thirdStick.getRawButton(OI.climberForwardToggle)){
 				RobotMap.climbControl.set(1-RobotMap.climbControl.get()); //if 0, 1, if 1, 0. 

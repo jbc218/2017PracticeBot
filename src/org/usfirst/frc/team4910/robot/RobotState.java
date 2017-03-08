@@ -55,7 +55,7 @@ public class RobotState {
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			synchronized(this){
 				protectedSpigHeading=RobotMap.spig.getAngle();
 				protectedLeftEnc = DriveTrain.countsToInches(-RobotMap.left1.getEncPosition());
@@ -71,7 +71,8 @@ public class RobotState {
 				accelerationX = 385.827*RobotMap.RIOAccel.getX(); //inches per second^2
 				accelerationY = 385.827*RobotMap.RIOAccel.getY();
 				//shooterSpeed = 600.0*(RobotMap.shootControl.getEncVelocity()/80.0);
-		        shooterSpeed = -RobotMap.shootControl.getSpeed();
+		        shooterSpeed = RobotMap.isCompBot ? -RobotMap.shootControl.getSpeed() : RobotMap.shootControl.getSpeed();
+//		        SmartDashboard.putNumber("ShooterSpeed", shooterSpeed);
 				//We want it so that relative to the start, x is left and right, y is up and down.
 		        //Also, the navX gyro is backwards
 		        posY += (Math.cos(Math.toRadians(spigHeading))
@@ -85,10 +86,12 @@ public class RobotState {
 		        		*(protectedLeftEnc-lastLeftPos+protectedRightEnc-lastRightPos)/2.0);
 		        lastLeftPos=protectedLeftEnc;
 		        lastRightPos=protectedRightEnc;
-		        SmartDashboard.putNumber("PositionX", posX);
-		        SmartDashboard.putNumber("PositionY", posY);
-		        SmartDashboard.putNumber("PositionXNavX", posXNavX);
-		        SmartDashboard.putNumber("PositionYNavX", posYNavX);
+//		        SmartDashboard.putNumber("PositionX", posX);
+//		        SmartDashboard.putNumber("PositionY", posY);
+//		        SmartDashboard.putNumber("PositionXNavX", posXNavX);
+//		        SmartDashboard.putNumber("PositionYNavX", posYNavX);
+//		        SmartDashboard.putNumber("SPIG full heading", protectedSpigHeading);
+//		        SmartDashboard.putNumber("SPIG zeroed heading", spigHeading);
 				
 				jerkX=(accelerationX-lastAccelX)/(Timer.getFPGATimestamp()-time); //For whatever reason, NavX just leaves out the whole "dt" part in their collision detector.
 				jerkY=(accelerationY-lastAccelY)/(Timer.getFPGATimestamp()-time);

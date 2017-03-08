@@ -31,7 +31,7 @@ public class RobotMap {
 	public static final boolean isCompBot=true;
 	
 	public static final double DriveWheelDiameter=6;
-	public static final double EncCountsPerRev= isCompBot ? 1440 : 4096; //4096 for practice bot, 1440 for compbot
+	public static final double EncCountsPerRev= (isCompBot&&false) ? 1440 : 4096; //4096 for practice bot, 1440 for compbot
 	public static final double rightMinIPS=-210.0;
 	public static final double rightMaxIPS=210.0;
 	public static final double leftMinIPS=-210.0;
@@ -42,7 +42,7 @@ public class RobotMap {
 	public static final double rightMaxIPSPS=982.7519404608955;
 	
 	//Position, velocity, and gyro PIDF values are all for high gear only
-	public static final double PositionKp=0.034; //0.0125
+	public static final double PositionKp=isCompBot ? 0.036 :0.034; //0.0125
 	public static final double PositionKi=0.0;//0.0002; 
 	public static final double PositionKd=0.0; //0.04
 	public static final double PositionKf=0.0;
@@ -51,9 +51,9 @@ public class RobotMap {
 	public static final double VelocityKd=0.0;
 	public static final double VelocityKf1=0.0053;
 	public static final double VelocityKf2=0.0053;
-	public static final double GyroKp=0.03; //0.0325 (high gear)
+	public static final double GyroKp= isCompBot ? 0.0325: 0.0308; //0.0325 (high gear)
 	public static final double GyroKi=0.0; //0.0013
-	public static final double GyroKd=0.0255; //1.0
+	public static final double GyroKd= isCompBot ? 0.026: 0.0257; //1.0
 	
 	//Our solution for not needing this was just starting in low gear
 	//Apparently, the shifter gears actually have a use for me.
@@ -61,10 +61,10 @@ public class RobotMap {
 //	public static final double GyroSmallKi=0.0;
 //	public static final double GyroSmallKd=0.0;
 	
-	public static final double shooterKp= isCompBot ? 0.04186 : .003; //.003
-	public static final double shooterKi= isCompBot ? 1.81395E-4 : 1.3E-5; //1.3E-5
+	public static final double shooterKp= isCompBot ? 0.04186 : .00237; //.003
+	public static final double shooterKi= isCompBot ? 1.81395E-4 : 0.869E-5; //1.3E-5
 	public static final double shooterKd=0.0;
-	public static final double shooterKf= isCompBot ? 0.011627 : 8.0E-4;//8.0E-4;
+	public static final double shooterKf= isCompBot ? 0.011627 : 6.3E-4;//8.0E-4;
 	public static final double shooterGuideKp=0.0;
 	public static final double shooterGuideKd=0.0;
 	public static final double shooterGuideKf=0.0;
@@ -73,7 +73,7 @@ public class RobotMap {
 	public static final double shooterSpinupTime=2.2;
 	public static final double shooterTimeToShoot=60.0;
 	
-	public static final String PegIP = isCompBot ? "10.49.10.42" : "10.49.10.40";
+	public static final String PegIP = isCompBot ? "10.49.10.17" : "10.49.10.40";
 	public static final String ShooterIP = isCompBot ? "10.49.10.44" : "10.49.10.62";
 	
 	public static final boolean testerCodeEnabled=false; //This enables functions like writing data down to a CSV file, or
@@ -113,7 +113,8 @@ public class RobotMap {
         shootControl.setVoltageRampRate(30);
         shootControl.setEncPosition(0);
         c = new Compressor(0); //TODO: Schedule the compressor for certain times during the match    
-        c.setClosedLoopControl(false);
+        c.setClosedLoopControl(true);
+        c.start();
         drivePositionLeftPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);
         drivePositionRightPID = new SynchronousPID(PositionKp,PositionKi,PositionKd,PositionKf);
         driveVelocityLeftPID = new SynchronousPID(VelocityKp,VelocityKi,VelocityKd,VelocityKf1);
@@ -128,7 +129,7 @@ public class RobotMap {
         shootControl.configEncoderCodesPerRev(75);
         
 
-        if(isCompBot){
+        if((isCompBot&&false)){
         	left1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
         	right1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
         }else{

@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * This was stolen from team254, but I changed the name of the class so it's okay
  */
 public class Iterator {
-    public final double kPeriod = 0.015;
+    public final double kPeriod = 0.01;
 
     private boolean isRunning;
 
@@ -46,7 +46,7 @@ public class Iterator {
                 if (isRunning) {
                     double now = Timer.getFPGATimestamp();
                     for (Iterate iter : iterable) {
-                        iter.exec();
+                        iter.run();
                     }
                     dt = now - timestamp;
                     timestamp = now;

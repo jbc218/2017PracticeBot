@@ -22,15 +22,15 @@ public class GyroCalibrator implements Iterate {
 	}
 
 	@Override
-	public void exec() {
+	public void run() {
         double now = Timer.getFPGATimestamp();
         // Keep re-calibrating the gyro every 5 seconds
         if (now - mCalibrationStartTime > GyroHelper.kCalibrationSampleTime) {
             //SmartDashboard.putBoolean("NAVX Calibrating", RobotMap.navxGyro.isCalibrating());
             spig.endCalibrate();
             //System.out.println("Gyro calibrated, new zero is " + spig.getCenter());
-            SmartDashboard.putNumber("Heading", spig.getAngle());
-            SmartDashboard.putNumber("SPI gyro center", spig.getCenter());
+//            SmartDashboard.putNumber("Heading", spig.getAngle());
+//            SmartDashboard.putNumber("SPI gyro center", spig.getCenter());
             mCalibrationStartTime = now;
             spig.startCalibrate();
         }

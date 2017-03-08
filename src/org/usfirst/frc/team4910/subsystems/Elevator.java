@@ -12,7 +12,7 @@ import org.usfirst.frc.team4910.robot.RobotMap;
  */
 public class Elevator {
 	private static Elevator instance;
-	private enum ElevatorState{
+	public enum ElevatorState{
 		Disabled, Running;
 	}
 	private ElevatorState currentState=ElevatorState.Running;
@@ -25,7 +25,7 @@ public class Elevator {
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			synchronized(Elevator.this){
 				switch(currentState){
 				case Disabled:
@@ -69,6 +69,9 @@ public class Elevator {
 	}
 	private Elevator(){
 		
+	}
+	public ElevatorState getElevatorState(){
+		return currentState;
 	}
 	public static Elevator getInstance(){
 		return instance==null ? instance=new Elevator() : instance;

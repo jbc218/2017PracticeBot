@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.util.Calendar;
 
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 import org.usfirst.frc.team4910.iterations.*;
 import org.usfirst.frc.team4910.subsystems.DriveTrain.DriveControlState;
 import org.usfirst.frc.team4910.subsystems.*;
@@ -17,18 +21,23 @@ import org.usfirst.frc.team4910.util.Path.PathType;
 
 import com.opencsv.CSVWriter;
 
+import edu.wpi.cscore.AxisCamera;
+import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 
 public class Robot extends IterativeRobot {
     
-	
+	Thread visionThread;
 	Iterator iteratorEnabled = new Iterator();
 	Iterator iteratorDisabled = new Iterator();
 	public static DriveTrain drive;
@@ -37,14 +46,16 @@ public class Robot extends IterativeRobot {
 	static VisionProcessor vision;
 	static Climber climb;
 	static OI oi;
-	static Path pat;
+	public static Path pat;
 	static SendableChooser<String> autoChoose;
+	static SendableChooser<String> gearAutoChoose;
 	static boolean compressorEnabled;
 	private boolean tunePID=false;
 	public static double closeLoopTime=0;
 	
     public void robotInit() {
         try{
+        	double initTime=Timer.getFPGATimestamp();
         	RobotMap.init();
         	oi = OI.getInstance();
         	drive = DriveTrain.getInstance();
@@ -64,6 +75,7 @@ public class Robot extends IterativeRobot {
         	iteratorDisabled.register(new GyroCalibrator());
         	resetAllSensors();
         	
+        	
     		autoChoose = new SendableChooser<String>();
     		autoChoose.addObject("POSITION CHOOSER", "0");
     		autoChoose.addDefault("Do Nothing", "Do Nothing");
@@ -73,7 +85,13 @@ public class Robot extends IterativeRobot {
     		autoChoose.addObject("Blue Left", "Blue Left");
     		autoChoose.addObject("Blue Middle", "Blue Middle");
     		autoChoose.addObject("Blue Right", "Blue Right");
+    		autoChoose.addObject("Just go forward", "Just go forward");
+    		gearAutoChoose = new SendableChooser<String>();
+    		gearAutoChoose.addObject("Open gates in auto", "Open gates in auto");
+    		gearAutoChoose.addDefault("Keep gates closed in auto", "Keep gates closed in auto");
     		SmartDashboard.putData("Auto mode", autoChoose);
+    		SmartDashboard.putData("Gates in auto chooser", gearAutoChoose);
+    		System.out.println("Robot Init time: "+(Timer.getFPGATimestamp()-initTime));
         	//RobotMap.g.calibrate();
         	
         }catch(Throwable t){
@@ -105,13 +123,13 @@ public class Robot extends IterativeRobot {
         }
     }
     
-    @SuppressWarnings("unused")
 	public void autonomousInit() {
         try{
         	resetAllSensors();
         	CrashTracker.logAutoInit();
         	iteratorEnabled.start();
         	iteratorDisabled.stop();
+        	RobotMap.c.stop();
         	Timer.delay(.03);
         	pat.reset();
         	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
@@ -120,122 +138,68 @@ public class Robot extends IterativeRobot {
         	//The point of this is to drive partly to the peg, and then use vision tracking to correct itself,
         	//since we can't expect the human to place it in the right place each time
         	boolean nothing=false;
-        	double initialTurnAngle = RobotMap.isCompBot ? 55.0 : 60.0; //We didn't have enough time to fully tune PID but it was close enough to this
+        	double initialTurnAngleLeft = RobotMap.isCompBot ? 58.0: 60.0; //We didn't have enough time to fully tune PID but it was close enough to this
+        	double initialTurnAngleRight = RobotMap.isCompBot ? 62.0 : 60.0;
+        	//double initDist= RobotMap.isCompBot ? 80 : 94.5;
+        	double initDist= RobotMap.isCompBot ? 88.0 : 82;
         	switch((String)autoChoose.getSelected()){
         	case "Do Nothing":
         		nothing=true;
         		break;
         	case "Red Left":
         		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(80-14.5));
-        		pat.register(Path.PathType.Heading, -initialTurnAngle);
+        		pat.register(Path.PathType.Position, -(initDist-14.5));
+        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
         		pat.Iterate();
         		pat.setPositionTimeThresh(7.25);
-        		trackAndMove();
+        		//trackAndMove();
         		break;
         	case "Red Middle":
-        		pat.register(Path.PathType.Position, 100.39/2.0);
-        		pat.Iterate();
-        		
-        		double ang=0.0, angThresh=0.5;
-        		//correct angle
-        		vision.startPegTracking();
-        		while(vision.getCurrentIteration()<=2);
-        		ang=-vision.getAveragePegAngle();
-        		vision.stopPegTracking();
-        		if(Math.abs(ang)>angThresh){
-        			pat.register(PathType.Heading, ang);
-        			pat.Iterate();
-        		}
-        		
-        		pat.register(Path.PathType.Position, 100.39/2.0);
-        		pat.Iterate();
-        		
-        		//correct angle
-        		vision.startPegTracking();
-        		while(vision.getCurrentIteration()<=2);
-        		ang=-vision.getAveragePegAngle();
-        		vision.stopPegTracking();
-        		if(Math.abs(ang)>angThresh){
-        			pat.register(PathType.Heading, 1.4*ang);
-        			pat.Iterate();
-        		}
-        		
-        		//After this we'd use an ultrasonic sensor to do the rest of the work
-        		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
-        		ult = ult<4.0 ? 0.0 : -(ult+9.0);
-        		pat.register(PathType.Position, ult);
-        		pat.Iterate();
-        		
-        		//trackAndMove();
+        		middleAuto();
         		break;
         	case "Red Right":
         		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(80-14.5));
-        		pat.register(Path.PathType.Heading, initialTurnAngle);
+        		pat.register(Path.PathType.Position, -(initDist-14.5));
+        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
         		pat.Iterate();
         		pat.setPositionTimeThresh(7.25);
-        		trackAndMove();
+        		//trackAndMove();
         		break;
         	case "Blue Left":
         		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(80-14.5));
-        		pat.register(Path.PathType.Heading, -initialTurnAngle);
+        		pat.register(Path.PathType.Position, -(initDist-14.5));
+        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
         		pat.Iterate();
         		pat.setPositionTimeThresh(7.25);
-        		trackAndMove();
+        		//trackAndMove();
         		break;
         	case "Blue Middle":
-        		pat.register(Path.PathType.Position, 100.39/2.0);
-        		pat.Iterate();
-        		
-        		double ang2=0.0, angThresh2=0.5; //throws a duplicate variable error for some reason, which is illogical
-        		//correct angle
-        		vision.startPegTracking();
-        		while(vision.getCurrentIteration()<=2);
-        		ang2=-vision.getAveragePegAngle();
-        		vision.stopPegTracking();
-        		if(Math.abs(ang2)>angThresh2){
-        			pat.register(PathType.Heading, ang2);
-        			pat.Iterate();
-        		}
-        		
-        		pat.register(Path.PathType.Position, 100.39/2.0);
-        		pat.Iterate();
-        		
-        		//correct angle
-        		vision.startPegTracking();
-        		while(vision.getCurrentIteration()<=2);
-        		ang2=-vision.getAveragePegAngle();
-        		vision.stopPegTracking();
-        		if(Math.abs(ang2)>angThresh2){
-        			pat.register(PathType.Heading, 1.4*ang2);
-        			pat.Iterate();
-        		}
-        		
-        		//After this we'd use an ultrasonic sensor to do the rest of the work
-        		double ult2 = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
-        		ult2 = ult2<4.0 ? 0.0 : -(ult2+9.0);
-        		pat.register(PathType.Position, ult2);
-        		pat.Iterate();
+        		middleAuto();
         		break;
         	case "Blue Right":
         		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(80-14.5));
-        		pat.register(Path.PathType.Heading, initialTurnAngle);
+        		pat.register(Path.PathType.Position, -(initDist-14.5));
+        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
         		pat.Iterate();
         		pat.setPositionTimeThresh(7.25);
-        		trackAndMove();
+        		//trackAndMove();
         		break;
+        	case "Just go forward":
+        		pat.setPositionTimeThresh(7.25);
+        		pat.register(Path.PathType.Position, -90);
+        		nothing=true;
+        		pat.Iterate();
         	default:
         		break;
         	}
-        	if(!nothing && RobotMap.isCompBot){
+        	if(!nothing && RobotMap.isCompBot && ((String)gearAutoChoose.getSelected()).equals("Open gates in auto")){
         		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
+        		RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
         		Timer.delay(.16);
         		pat.register(Path.PathType.Position, 24.0); //go back two feet
         		pat.Iterate();
         	}
+        	RobotMap.c.start();
         	//vision.stopPegTracking();
         	
         }catch(Throwable t){
@@ -263,9 +227,11 @@ public class Robot extends IterativeRobot {
         	System.out.println("Testing");
         	closeLoopTime=0;
         	drive.disableHeadingMode();
-        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
+        	RobotMap.c.start();
+        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear, but switch quickly so it actually compresses
         	RobotMap.gates.set(DoubleSolenoid.Value.kReverse); //Close gates
-        	RobotMap.shootControl.setEncPosition(0);
+        	//RobotMap.shootControl.setEncPosition(0);
         }catch(Throwable t){
         	CrashTracker.logThrowableCrash(t);
         	throw t;
@@ -278,6 +244,20 @@ public class Robot extends IterativeRobot {
         	if(RobotMap.testerCodeEnabled){
         		testerCode();
         	}
+        	
+        	//check for c.enabled() so we aren't start()ing as we're compressing
+			if(RobotMap.c.enabled()
+					&&(
+						RobotMap.gearShifter.get().equals(DoubleSolenoid.Value.kForward)
+						|| Math.abs(RobotMap.shootControl.get())>.2 
+						|| elev.getElevatorState().equals(Elevator.ElevatorState.Running)
+						|| Math.abs(RobotMap.climbControl.get())>.2)
+					){
+				RobotMap.c.stop();
+			}else{
+				RobotMap.c.start();
+			}
+        	
 			if(OI.rightStick.getRawButton(OI.GearShiftToggle)){
 				if(RobotMap.gearShifter.get().equals(DoubleSolenoid.Value.kForward)){
 					RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
@@ -299,20 +279,20 @@ public class Robot extends IterativeRobot {
 				}
 				while(OI.rightStick.getRawButton(OI.Gates));
 			}
-			if(OI.rightStick.getRawButton(OI.CompressorToggle)){
-				while(OI.rightStick.getRawButton(OI.CompressorToggle));
-				if(compressorEnabled){
-					//Yes, this is actually necessary. c.isEnabled() just checks if its running, not if a start signal is active.
-					//I also can't set a boolean value, I have to use stop() or start()
-					compressorEnabled=false;
-					RobotMap.c.stop();
-					System.out.println("Compressor stopped");
-				}else{
-					compressorEnabled=true;
-					RobotMap.c.start();
-					System.out.println("Compressor started");
-				}
-			}
+//			if(OI.rightStick.getRawButton(OI.CompressorToggle)){
+//				while(OI.rightStick.getRawButton(OI.CompressorToggle));
+//				if(compressorEnabled){
+//					//Yes, this is actually necessary. c.isEnabled() just checks if its running, not if a start signal is active.
+//					//I also can't set a boolean value, I have to use stop() or start()
+//					compressorEnabled=false;
+//					RobotMap.c.stop();
+//					System.out.println("Compressor stopped");
+//				}else{
+//					compressorEnabled=true;
+//					RobotMap.c.start();
+//					System.out.println("Compressor started");
+//				}
+//			}
 
 			
         }catch(Throwable t){
@@ -548,7 +528,7 @@ public class Robot extends IterativeRobot {
 		double dist= ((-vision.getAveragePegDistance())-((76.234-14.5)))/2.0;
 		vision.stopPegTracking();
 		if(Math.abs(ang)>angThresh){
-			pat.register(PathType.Heading, 1.05*ang);
+			pat.register(PathType.Heading, 0.6*ang);
 			pat.Iterate();
 		}
 		
@@ -568,7 +548,7 @@ public class Robot extends IterativeRobot {
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
 		if(Math.abs(ang)>angThresh){
-			pat.register(PathType.Heading, ang);
+			pat.register(PathType.Heading, 1.3*ang);
 			pat.Iterate();
 		}
 		
@@ -587,7 +567,7 @@ public class Robot extends IterativeRobot {
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
 		if(Math.abs(ang)>angThresh){
-			pat.register(PathType.Heading, ang);
+			pat.register(PathType.Heading, 1.1*ang);
 			pat.Iterate();
 		}
 		
@@ -607,13 +587,55 @@ public class Robot extends IterativeRobot {
 		ang=-vision.getAveragePegAngle();
 		vision.stopPegTracking();
 		if(Math.abs(ang)>angThresh){
-			pat.register(PathType.Heading, 1.1*ang);
+			pat.register(PathType.Heading, 1.5*ang-2.8);
 			pat.Iterate();
 		}
 		
 		//After this we'd use an ultrasonic sensor to do the rest of the work
+		if(RobotMap.isCompBot){
+			double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+			ult = ult<4.0 ? 0.0 : -(ult+10.5);
+			pat.register(PathType.Position, ult);
+			pat.Iterate();
+		}
+    }
+    private void middleAuto(){
+		double initialDist= RobotMap.isCompBot ? -73.0 : -58;
+		double denom=1.8;
+		pat.register(Path.PathType.Position, initialDist/denom);
+		pat.Iterate();
+		
+		double ang=0.0, dist, angThresh=0.1; //throws a duplicate variable error for some reason, which is illogical
+		//correct angle
+		vision.startPegTracking();
+		while(vision.getCurrentIteration()<=4);
+		ang=-vision.getAveragePegAngle();
+		dist=-vision.getAveragePegDistance();
+		vision.stopPegTracking();
+		if(Math.abs(ang)>angThresh){
+			pat.register(PathType.Heading, 1.2*ang+2.4);
+			pat.Iterate();
+		}
+		dist = (dist+((initialDist-(initialDist/denom))))/2.0; //average with expected
+		pat.register(Path.PathType.Position, dist);
+		pat.Iterate();
+		
+		//correct angle
+		vision.startPegTracking();
+		while(vision.getCurrentIteration()<=2);
+		ang=-vision.getAveragePegAngle();
+		vision.stopPegTracking();
+		if(Math.abs(ang)>angThresh){
+			pat.register(PathType.Heading, 1.4*ang);
+			pat.Iterate();
+		}
+		
 		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
-		ult = ult<4.0 ? 0.0 : -(ult+10.0);
+		if(RobotMap.isCompBot){
+			ult = ult<4.0 ? -13.0 : -(ult+11.0);
+		}else{
+			ult=-12.0;
+		}
 		pat.register(PathType.Position, ult);
 		pat.Iterate();
     }

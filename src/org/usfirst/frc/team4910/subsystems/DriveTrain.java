@@ -83,7 +83,7 @@ public class DriveTrain {
 		}
 
 		@Override
-		public void exec() {
+		public void run() {
 			synchronized(DriveTrain.this){
 				double now = Timer.getFPGATimestamp();
 				//Timer.delay(.04);
@@ -164,15 +164,17 @@ public class DriveTrain {
 		return headingMode;
 	}
 	private synchronized DriveControlState handleRegular(){
-		setpointLeft=-OI.leftStick.getY();
-		setpointRight=-OI.rightStick.getY();
-		setpointLeft = reverse && !headingMode ? OI.rightStick.getY() : setpointLeft;
-		setpointRight = reverse && !headingMode ? OI.leftStick.getY() : setpointRight;
-		double G=0.0;
-		if(headingMode){
-			G=RobotMap.driveGyroPID.calculate(RobotState.getSpigHeading());
+		if(!Robot.pat.robot.isAutonomous()){
+			setpointLeft=-OI.leftStick.getY();
+			setpointRight=-OI.rightStick.getY();
+			setpointLeft = reverse && !headingMode ? OI.rightStick.getY() : setpointLeft;
+			setpointRight = reverse && !headingMode ? OI.leftStick.getY() : setpointRight;
+			double G=0.0;
+			if(headingMode){
+				G=RobotMap.driveGyroPID.calculate(RobotState.getSpigHeading());
+			}
+			drive(setpointLeft-G,setpointRight+G);
 		}
-		drive(setpointLeft-G,setpointRight+G);
 		switch(wantedState){
 		case regular:
 			return DriveControlState.regular;
@@ -306,15 +308,15 @@ public class DriveTrain {
 	public synchronized double[] getSetpoints(){
 		return new double[]{setpointLeft,setpointRight};
 	}
-	private synchronized void drive(double left, double right){
+	public synchronized void drive(double left, double right){
 		leftOut=-left;
 		rightOut=right;
-        if ( Math.abs(left) < .1 && !headingMode && currentState==DriveControlState.regular) {
+        if ( (Math.abs(left) < .15 && !headingMode && currentState==DriveControlState.regular) || (Math.abs(left)<.2 && currentState==DriveControlState.position && RobotMap.isCompBot)) {
         	RobotMap.left1.set(0);
         }else{
         	RobotMap.left1.set(-left);
         }
-        if ( Math.abs(right) < .1 && !headingMode && currentState==DriveControlState.regular) {
+        if ( (Math.abs(right) < .15 && !headingMode && currentState==DriveControlState.regular) || (Math.abs(right)<.2 && currentState==DriveControlState.position && RobotMap.isCompBot)) {
         	RobotMap.right1.set(0);
         }else{
         	RobotMap.right1.set(right);
