@@ -2,6 +2,8 @@ package org.usfirst.frc.team4910.subsystems;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 import org.opencv.core.Core;
@@ -17,6 +19,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.usfirst.frc.team4910.iterations.Iterate;
 import org.usfirst.frc.team4910.robot.OI;
+import org.usfirst.frc.team4910.robot.Robot;
 import org.usfirst.frc.team4910.robot.RobotMap;
 import org.usfirst.frc.team4910.robot.RobotState;
 
@@ -61,7 +64,7 @@ public class VisionProcessor {
 	private static final double tapeArea = 10.0; //Just area of one
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
 	private static final double heightToPegCenter = 7.0; //In inches
-	private static final double minPegContourArea=30;
+	private static final double minPegContourArea=9.0;
 	
 
 	private static final double optimalShootDistance=102.18;
@@ -133,8 +136,8 @@ public class VisionProcessor {
 	BLACK = new Scalar(0, 0, 0),
 
 	//HSV Threshold
-	LOWER_BOUNDS = new Scalar(65,119,78),
-	UPPER_BOUNDS = new Scalar(97,255,146);
+	LOWER_BOUNDS = RobotMap.isCompBot ? new Scalar(65,119,78) : new Scalar(60,83,78),
+	UPPER_BOUNDS = RobotMap.isCompBot ? new Scalar(97,255,146) : new Scalar(99,253,203);
 	private static Scalar color = BLACK;
 	private static double itercount=0.0;
 	private static double pegDistSum=0.0;
@@ -275,6 +278,11 @@ public class VisionProcessor {
 	private synchronized void processPeg(){
 		synchronized(VisionProcessor.this){
 			cvsPeg.grabFrame(BGR);
+			if(!RobotMap.isCompBot){ //Newer cameras decided to get rid of rotating the camera 90/270 degrees for some stupid reason
+				Core.transpose(BGR, BGR);
+				Core.flip(BGR, BGR, 0);
+				//This rotates by 270 deg
+			}
 			captureTime=Timer.getFPGATimestamp();
 			currentAngle=RobotState.getProtectedHeading();
 			currentDistance=(RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0;
@@ -285,19 +293,33 @@ public class VisionProcessor {
 				Imgproc.cvtColor(BGR, HSV, Imgproc.COLOR_BGR2HSV); //turns image to HSV format
 				Core.inRange(HSV, LOWER_BOUNDS, UPPER_BOUNDS, threshold); //applies HSV filter
 				Imgproc.findContours(threshold, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE); //Finds contours
-
+				//sort contours based on our current auto mode. Since the for loop just cycles through it in order, it should find the
+				//needed pegs in order, and then stop
+				if(((String)Robot.autoChoose.getSelected()).contains("Left")){ 
+					//sorts from left to right
+					contours.sort((MatOfPoint a, MatOfPoint b) -> Imgproc.boundingRect(a).x - Imgproc.boundingRect(b).x);
+					
+				}else if(((String)Robot.autoChoose.getSelected()).contains("Right")){
+					//sorts from right to left
+					contours.sort((MatOfPoint a, MatOfPoint b) -> (int)(Imgproc.boundingRect(b).br().x - Imgproc.boundingRect(a).br().x));
+					
+				} //ignore the else condition
+				
 				double contA; //contour area
 
 
 				if(hierarchy.size().height > 0 && hierarchy.size().width > 0 && !insideTarget){
-					//System.out.println("Contours found");
+					System.out.println("Contours found");
 
 					Rect rec1=null, rec2=null; //one for each peg
 					Rect totalRect=null;
 					boolean hasFoundAPeg=false;
+					//cycles through contours
+
 					for(int idx = 0; idx >= 0 && !insideTarget; idx = (int) hierarchy.get(0, idx)[0]){
 						contA = Imgproc.contourArea(contours.get(idx));
-						
+						System.out.println(contA);
+						//Imgproc.moments(contours.get(idx)).
 						if(contA > minPegContourArea && !insideTarget){
 							//System.out.println("Large contours found");
 							MatOfPoint approxf1 = new MatOfPoint();
@@ -339,8 +361,8 @@ public class VisionProcessor {
 						double deltaAngle = RobotState.getProtectedHeading()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
 						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgXPeg) + deltaAngle;
-						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgY);
-						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgY)+deltaDistance;
+						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgYPeg);
+						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgYPeg)+deltaDistance;
 						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384)+deltaDistance;
 						//I messed up somewhere in my calculations, but this fits the curve.
 						//Data calculated using notepad++ and an (unfortunate) kid looking for something to do
@@ -353,10 +375,12 @@ public class VisionProcessor {
 						//System.out.println("Center Y coordinate and distance: "+(totalRect.y+.5*totalRect.height)+", "+RobotState.getLeftPos());
 						calculatedAngle = -0.362377+0.736886*calculatedAngle+0.00256394*calculatedAngle*calculatedAngle+0.000025452*calculatedAngle*calculatedAngle*calculatedAngle;
 						//another curve regression to account for lens
-						System.out.println("Angle to target X: "+calculatedAngle);
+						System.out.println("Angle to target X: "+calculatedAngle+" X coord: "+((totalRect.x+.5*totalRect.width)-centerImgXPeg));
 						//System.out.println("Angle to target Y: "+calculatedAngleY);
 						
-						System.out.println("Ground distance to target: "+calculatedDistance);
+						System.out.println("Ground distance to target: "+calculatedDistance+" Y coord: "+((totalRect.y+.5*totalRect.height)-centerImgYPeg));
+						
+						
 						//System.out.println("Distance Y: "+calculatedDistance*Math.cos(Math.toRadians(calculatedAngle)));
 						_angle=calculatedAngle;
 						_distance=calculatedDistance;

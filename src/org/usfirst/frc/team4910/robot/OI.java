@@ -52,6 +52,8 @@ public class OI {
     public static final int ElevatorToggle=2;
     public static final int climberForwardToggle=3;
     public static final int climberBackwardToggle=4;
+    public static final int cameraDebugTest=7;
+    public static final int forwardAutoTest=8;
     
     //public static HashMap<Joystick, Integer> buttonMap = new HashMap<Joystick, Integer>(); //Possibly implement later
     //TODO: either implement a button hashmap or implement something else to keep track of buttons and their respective joysticks

@@ -47,7 +47,7 @@ public class Robot extends IterativeRobot {
 	static Climber climb;
 	static OI oi;
 	public static Path pat;
-	static SendableChooser<String> autoChoose;
+	public static SendableChooser<String> autoChoose;
 	static SendableChooser<String> gearAutoChoose;
 	static boolean compressorEnabled;
 	private boolean tunePID=false;
@@ -147,41 +147,45 @@ public class Robot extends IterativeRobot {
         		nothing=true;
         		break;
         	case "Red Left":
-        		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(initDist-14.5));
-        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
-        		pat.Iterate();
-        		pat.setPositionTimeThresh(7.25);
+        		visionAlternate(-initialTurnAngleLeft);
+//        		pat.setPositionTimeThresh(7.25);
+//        		pat.register(Path.PathType.Position, -(initDist-14.5));
+//        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
+//        		pat.Iterate();
+//        		pat.setPositionTimeThresh(7.25);
         		//trackAndMove();
         		break;
         	case "Red Middle":
         		middleAuto();
         		break;
         	case "Red Right":
-        		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(initDist-14.5));
-        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
-        		pat.Iterate();
-        		pat.setPositionTimeThresh(7.25);
+        		visionAlternate(initialTurnAngleRight);
+//        		pat.setPositionTimeThresh(7.25);
+//        		pat.register(Path.PathType.Position, -(initDist-14.5));
+//        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
+//        		pat.Iterate();
+//        		pat.setPositionTimeThresh(7.25);
         		//trackAndMove();
         		break;
         	case "Blue Left":
-        		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(initDist-14.5));
-        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
-        		pat.Iterate();
-        		pat.setPositionTimeThresh(7.25);
+        		visionAlternate(-initialTurnAngleLeft);
+//        		pat.setPositionTimeThresh(7.25);
+//        		pat.register(Path.PathType.Position, -(initDist-14.5));
+//        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
+//        		pat.Iterate();
+//        		pat.setPositionTimeThresh(7.25);
         		//trackAndMove();
         		break;
         	case "Blue Middle":
         		middleAuto();
         		break;
         	case "Blue Right":
-        		pat.setPositionTimeThresh(7.25);
-        		pat.register(Path.PathType.Position, -(initDist-14.5));
-        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
-        		pat.Iterate();
-        		pat.setPositionTimeThresh(7.25);
+        		visionAlternate(initialTurnAngleLeft);
+//        		pat.setPositionTimeThresh(7.25);
+//        		pat.register(Path.PathType.Position, -(initDist-14.5));
+//        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
+//        		pat.Iterate();
+//        		pat.setPositionTimeThresh(7.25);
         		//trackAndMove();
         		break;
         	case "Just go forward":
@@ -240,7 +244,31 @@ public class Robot extends IterativeRobot {
     
     public void teleopPeriodic() {
         try{
-
+        	if(OI.thirdStick.getRawButton(OI.cameraDebugTest) && !RobotMap.isCompBot){
+        		while(OI.thirdStick.getRawButton(OI.cameraDebugTest));
+        		visionAlternate(-60.0);
+        	}
+        	if(OI.thirdStick.getRawButton(OI.forwardAutoTest) && !RobotMap.isCompBot){
+        		while(OI.thirdStick.getRawButton(OI.forwardAutoTest));
+        		
+        		RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
+            	Timer.delay(.05);
+        		pat.register(PathType.Position, -96+38.5);
+        		pat.Iterate();
+        		
+            	vision.startPegTracking();
+            	while(vision.getCurrentIteration()<=4);
+            	double vang=-vision.getAveragePegAngle();
+            	//double vdist=-vision.getAveragePegDistance();
+            	vision.stopPegTracking();
+            	pat.register(PathType.Heading, vang);
+            	pat.Iterate();
+        		
+        		Timer.delay(.07);
+        		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+        		pat.register(PathType.Position, -9-ult);
+        		pat.Iterate();
+        	}
         	if(RobotMap.testerCodeEnabled){
         		testerCode();
         	}
@@ -638,5 +666,62 @@ public class Robot extends IterativeRobot {
 		}
 		pat.register(PathType.Position, ult);
 		pat.Iterate();
+    }
+    /**
+     * I intend for this method to use known variables and vision at the very beginning of 
+     * the match to calculate my expected first and last distances.
+     * This was written after the first district competition, but before the second one.
+     * 
+     * @param initAng The initial angle. This does not have to be explicitly equal to +/-60, but don't expect this to work for the middle peg.
+     */
+    private void visionAlternate(double initAng){
+    	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
+    	Timer.delay(.05);
+    	vision.startPegTracking();
+    	double vang=0.0,vdist=0.0, vAvgOffset; final double initDist=125.5-38.5; //38.5 is robot length, 131.0 is dist from peg to wall
+    	while(vision.getCurrentIteration()<=4);
+    	vang=-vision.getAveragePegAngle(); //this is always backwards, by the way
+    	vdist=vision.getAveragePegDistance(); //this is only positive for the purpose of the calculation
+    	vision.stopPegTracking();
+    	double offsetDistCalc=Math.signum(vang)*Math.sqrt(vdist*vdist-initDist*initDist); //calculates distance based on distance
+    	double offsetAngCalc=initDist*Math.tan(vang*Math.PI/180.0); //calculates distance based on angle
+    	vAvgOffset = (240.0*offsetAngCalc+320.0*offsetDistCalc)/560.0; //weighted average to account for either:
+    																	//camera distortion, top-bottom or left-right noise shifting the image center,
+    																	//and whatever linear regression messes up on
+    	vAvgOffset=offsetAngCalc; //tester code
+    	double firstDist=initDist-31.0-Math.signum(vAvgOffset)*vAvgOffset/Math.tan(initAng*Math.PI/180.0);
+    	double secondDist=19.25+Math.hypot(vAvgOffset, vAvgOffset/Math.tan(initAng*Math.PI/180.0));
+    	firstDist=-14.4375-firstDist; //19.25, 9.625
+    	secondDist=0.0-secondDist; //yes 3.5 should be positive
+    	//System.out.println(vang+" "+vdist+" "+offsetDistCalc+" "+offsetAngCalc+" "+vAvgOffset);
+    	System.out.println("First Dist: "+firstDist+"\nTurning angle: "+initAng+"\nSecond Dist: "+secondDist);
+    	//check if it's giving the right values before doing this
+    	pat.register(PathType.Position, firstDist);
+    	pat.register(PathType.Heading, initAng);
+		pat.Iterate();
+    	vision.startPegTracking();
+    	while(vision.getCurrentIteration()<=4);
+    	vang=-vision.getAveragePegAngle();
+    	vdist=-vision.getAveragePegDistance();
+    	vision.stopPegTracking();
+    	pat.register(PathType.Heading, vang);
+    	pat.register(PathType.Position, ((2*secondDist+vdist)/3.0)/2.0); //Bias for mathematically calculated values to correct for distortion
+    	pat.Iterate();
+    	
+		vision.startPegTracking();
+		while(vision.getCurrentIteration()<=2);
+		double ang=-vision.getAveragePegAngle();;
+		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+		vdist=-ult-vision.getAveragePegDistance();
+		vision.stopPegTracking();
+		//if(Math.abs(ang)>1.0){
+			pat.register(PathType.Heading, ang);
+			pat.register(PathType.Position, ((2*secondDist+vdist)/3.0)/2.0);
+			pat.Iterate();
+		//}
+    	
+		
+    	//do something with ultrasonic, we have to wait for that first
+    	
     }
 }

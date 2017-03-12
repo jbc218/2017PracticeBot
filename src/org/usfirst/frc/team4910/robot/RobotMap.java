@@ -28,7 +28,7 @@ public class RobotMap {
 	public static BuiltInAccelerometer RIOAccel;
 	public static AnalogInput ultra;
 	
-	public static final boolean isCompBot=true;
+	public static final boolean isCompBot=false;
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev= (isCompBot&&false) ? 1440 : 4096; //4096 for practice bot, 1440 for compbot
@@ -73,8 +73,8 @@ public class RobotMap {
 	public static final double shooterSpinupTime=2.2;
 	public static final double shooterTimeToShoot=60.0;
 	
-	public static final String PegIP = isCompBot ? "10.49.10.17" : "10.49.10.40";
-	public static final String ShooterIP = isCompBot ? "10.49.10.44" : "10.49.10.62";
+	public static final String PegIP = isCompBot ? "10.49.10.17" : "10.49.10.18"; //both have manual static IPs
+	public static final String ShooterIP = isCompBot ? "10.49.10.44" : "10.49.10.62"; //both have quasi-dynamic dhcp assigned IPs
 	
 	public static final boolean testerCodeEnabled=false; //This enables functions like writing data down to a CSV file, or
 														//putting (more) data on SmartDashboard, or anything involving tuning
@@ -91,7 +91,7 @@ public class RobotMap {
 		climbControl = new CANTalon(6);
 		shootGuide = new CANTalon(7);
 		shootControl = new CANTalon(8);
-		
+		//connect pc to 10.49.10.5
 		ultra = new AnalogInput(0);
 		gearShifter = isCompBot ? new DoubleSolenoid(7,6) : new DoubleSolenoid(4,5) ; //4,5 on practice bot
 		gates = isCompBot ? new DoubleSolenoid(4,5) : new DoubleSolenoid(6,7); //6,7 on comp bot
