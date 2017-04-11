@@ -64,7 +64,7 @@ public class VisionProcessor {
 	private static final double tapeArea = 10.0; //Just area of one
 	private static final double aspectRatio = pegTapeWidth/pegTapeHeight;
 	private static final double heightToPegCenter = 7.0; //In inches
-	private static final double minPegContourArea=9.0;
+	private static final double minPegContourArea=5.0;
 	
 
 	private static final double optimalShootDistance=102.18;
@@ -360,10 +360,17 @@ public class VisionProcessor {
 					try{
 						double deltaAngle = RobotState.getProtectedHeading()-currentAngle;
 						double deltaDistance = ((RobotMap.left1.getEncPosition()+RobotMap.right1.getEncPosition())/2.0) - currentDistance;
-						calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgXPeg) + deltaAngle;
+						if(rec2==null && !((String)Robot.autoChoose.getSelected()).contains("middle")){
+							calculatedAngle = yawAngleToTarget((rec1.x+.5*rec1.width)-centerImgXPeg) + deltaAngle;
+							calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(rec1.y+.5*rec1.height)-12.6384)+deltaDistance;
+							calculatedDistance = Math.min(73.0, calculatedDistance);
+						}else{
+							calculatedAngle = yawAngleToTarget((totalRect.x+.5*totalRect.width)-centerImgXPeg) + deltaAngle;
+							calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384)+deltaDistance;
+						}
 						//double calculatedAngleY = pitchAngleToTarget((totalRect.y+.5*totalRect.height)-centerImgYPeg);
 						//calculatedDistance = DistanceToTarget((totalRect.y+.5*totalRect.height)-centerImgYPeg)+deltaDistance;
-						calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(totalRect.y+.5*totalRect.height)-12.6384)+deltaDistance;
+						//calculatedDistance = 243.62+157.027*Math.atan(0.0592341*(rec1.y+.5*rec1.height)-12.6384)+deltaDistance;
 						//I messed up somewhere in my calculations, but this fits the curve.
 						//Data calculated using notepad++ and an (unfortunate) kid looking for something to do
 						//I used notepad++ to format the data such that I could plug it into Wolfram Alphas new "development" cloud
@@ -375,11 +382,20 @@ public class VisionProcessor {
 						//System.out.println("Center Y coordinate and distance: "+(totalRect.y+.5*totalRect.height)+", "+RobotState.getLeftPos());
 						calculatedAngle = -0.362377+0.736886*calculatedAngle+0.00256394*calculatedAngle*calculatedAngle+0.000025452*calculatedAngle*calculatedAngle*calculatedAngle;
 						//another curve regression to account for lens
-						System.out.println("Angle to target X: "+calculatedAngle+" X coord: "+((totalRect.x+.5*totalRect.width)-centerImgXPeg));
-						//System.out.println("Angle to target Y: "+calculatedAngleY);
+						if(rec2==null){
+							System.out.println("rec2 is null");
+							System.out.println("Angle to target X: "+calculatedAngle+" X coord: "+((rec1.x+.5*rec1.width)-centerImgXPeg));
 						
-						System.out.println("Ground distance to target: "+calculatedDistance+" Y coord: "+((totalRect.y+.5*totalRect.height)-centerImgYPeg));
+							//System.out.println("Angle to target Y: "+calculatedAngleY);
 						
+							System.out.println("Ground distance to target: "+calculatedDistance+" Y coord: "+((rec1.y+.5*rec1.height)-centerImgYPeg));
+						}else{
+							System.out.println("Angle to target X: "+calculatedAngle+" X coord: "+((totalRect.x+.5*totalRect.width)-centerImgXPeg));
+							
+							//System.out.println("Angle to target Y: "+calculatedAngleY);
+						
+							System.out.println("Ground distance to target: "+calculatedDistance+" Y coord: "+((totalRect.y+.5*totalRect.height)-centerImgYPeg));
+						}
 						
 						//System.out.println("Distance Y: "+calculatedDistance*Math.cos(Math.toRadians(calculatedAngle)));
 						_angle=calculatedAngle;

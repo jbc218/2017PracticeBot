@@ -25,7 +25,7 @@ public class Shooter {
 	}
 	private ShooterState currentState=ShooterState.Idle;
 	private double loadingStart=0;
-	private static double modifier=  true ? 86.0 : 1200.0;
+	private static double modifier=  true ? 86.0 : 1200.0; //We don't know, we're testing
 //	private double shootingStart=0;
 //	private double shootKp=0.0;
 	//private double setpoint=SmartDashboard.getNumber("ShootSetpoint", 0.0);
@@ -47,7 +47,10 @@ public class Shooter {
 			//TODO: fix all this code
 			synchronized(Shooter.this){
 				Timer.delay(.02);
-
+		    	SmartDashboard.putNumber("ShooterSpeed", RobotState.getShooterSpeed());
+		    	SmartDashboard.putNumber("ShootErrorSum", RobotMap.shootPID.getErrorSum());
+		    	SmartDashboard.putNumber("ShootSetpoint", RobotMap.shootPID.getSetpoint());
+		    	SmartDashboard.putNumber("ShootError", RobotMap.shootPID.getError());
 				ShooterState newState;
 				//SmartDashboard.putNumber("ShootSetpoint", setpoint);
 				//shootKp = SmartDashboard.getNumber("ShootKp", 0.0);
@@ -100,7 +103,7 @@ public class Shooter {
 					}
 					if(newState==ShooterState.Shooting){
 						//When shooter is ready, load
-						RobotMap.shootGuide.set(.5);
+						RobotMap.shootGuide.set(.75);
 						double t = Timer.getFPGATimestamp();
 					
 						while(Timer.getFPGATimestamp()-t<.5 && !OI.thirdStick.getRawButton(OI.ShooterToggle));
@@ -119,7 +122,7 @@ public class Shooter {
 					//RobotMap.shootControl.set((OI.thirdStick.getY())+(shootKp*(2600.0*OI.thirdStick.getY()-600.0*(RobotMap.shootControl.getEncVelocity()/80.0))));
 					//RobotMap.shootControl.set(OI.thirdStick.getY());
 					newState=ShooterState.Shooting;
-					RobotMap.shootGuide.set(0.5);
+					RobotMap.shootGuide.set(0.75);
 					//RobotMap.shootControl.set((-.60));
 					RobotMap.shootControl.set(RobotMap.shootPID.calculate(RobotState.getShooterSpeed()));
 					if(OI.thirdStick.getRawButton(OI.ShooterToggle)){

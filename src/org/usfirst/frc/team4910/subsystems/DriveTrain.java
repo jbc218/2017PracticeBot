@@ -483,8 +483,64 @@ public class DriveTrain {
 	        map.put("HeadingSetpoint", setpointHeading);
 	        map.put("LeftOutput", leftOut);
 	        map.put("RightOutput", -rightOut);
-	        map.put("LeftVoltOut", RobotMap.left1.getOutputVoltage()/RobotMap.left1.getBusVoltage());
-	        map.put("RightVoltOut", RobotMap.right1.getOutputVoltage()/RobotMap.right1.getBusVoltage());
+	        double VL=RobotMap.left1.getOutputVoltage();
+	        double VR=RobotMap.right1.getOutputVoltage();
+	        double CL=-RobotMap.left1.getOutputCurrent()-RobotMap.left2.getOutputCurrent();
+	        double CR=RobotMap.right1.getOutputCurrent()+RobotMap.right2.getOutputCurrent();
+	        //The following 2 lines also changed after columbus, all data before 3/18/17 will give a different value
+	        //All these electricity related lines are really only here so I can test if I can work with known diagonistic info to make everything smoother
+	        map.put("LeftVoltOut", VL); //outputVoltage actually just means applied voltage (throttle)
+	        map.put("RightVoltOut", VR);
+	        //PDP is hooked up in parallel, so input voltage stays the same (not output voltage)
+	        //Current dividies up into the two controllers, so I take the sum to get total motor resistance
+	        map.put("LeftCurrentOut", CL);
+	        map.put("RightCurrentOut", CR);
+	        //according to CANTalon.class, outputCurrent means current going into the Talon,
+	        //but according to the CANSpeedController.class, outputCurrent means current going to the motor, so I add them both.
+	        //These two lines are meant to get the total resistance of the robots movement (in ohms)
+	        map.put("LeftResistance", VL/CL); //I somehow have to convert ohms to newtons (of resistant force)
+	        map.put("RightResistance", VR/CR);
+	        //P=VI=6, where P is in watts (not horsepower), and V is actually change in V
+	        //P=dW/dt (change in work over time, also called "time derivative of work"), also in Watts. W means work, not watt, and W is measured in Joules
+	        map.put("LeftPower", VL*CL);
+	        map.put("RightPower", VR*CR);
+	        
+	        double LeftSpeedSI=0.0254*RobotState.getLeftSpeed(); //converts inches to meters because otherwise I'd have to scale power
+	        double RightSpeedSI=0.0254*RobotState.getRightSpeed();
+	        double LeftAccelSI=0.0254*RobotState.getLeftEncAccel();
+	        double RightAccelSI=0.0254*RobotState.getRightEncAccel();
+	        double SpeedXSI=0.0254*RobotState.getVelX();
+	        double SpeedYSI=0.0254*RobotState.getVelY();
+	        double AccelXSI=0.0254*RobotState.getEncAccelX();
+	        double AccelYSI=0.0254*RobotState.getEncAccelY();
+	        //P=dW/dt=F*v (F dot v)
+	        //P/v = F
+	        //F=ma so we can test how well this works by calculating our robot mass
+	        map.put("0LeftForce", VL*CL/LeftSpeedSI);
+	        map.put("0RightForce",  VR*CR/RightSpeedSI);
+	        map.put("0LeftTorque", 6.5*VL*CL/LeftSpeedSI);
+	        map.put("0RightTorque", 6.5*VR*CR/RightSpeedSI);
+	        //I doubt it's actually the average of them, but 254 did something similar for velocity robot kinematics and it worked for them
+	        map.put("0TotalForce", ((VL*CL/LeftSpeedSI)+(VR*CR/RightSpeedSI))/2.0);
+	        map.put("0TotalForce2", ((VL*CL+VR*CR)/2.0)/Math.hypot(SpeedXSI, SpeedYSI)); //this one seems more correct, but we won't know until we test mass
+	        
+	        
+	        //To test, let's get our robot mass, and plot it over time
+	        map.put("0LeftMass", (VL*CL/LeftSpeedSI)/LeftAccelSI);
+	        map.put("0RightMass", (VR*CR/RightSpeedSI)/RightAccelSI); //Both should sum up to the same number each time    
+	        map.put("0TotalMass", (((VL*CL/LeftSpeedSI)/LeftAccelSI)+((VR*CR/RightSpeedSI)/RightAccelSI))/2.0);
+	        map.put("0TotalMass2", (((VL*CL+VR*CR)/2.0)/Math.hypot(SpeedXSI, SpeedYSI))/Math.hypot(AccelXSI, AccelYSI));
+	        
+	        //Now let's do the same thing but in RobotState instead
+	        map.put("LeftForce", RobotState.getForceL());
+	        map.put("RightForce", RobotState.getForceR());
+	        map.put("TotalForce", (RobotState.getForceL()+RobotState.getForceR())/2.0);
+	        map.put("TotalForce2", RobotState.getForceTotal());
+	        map.put("LeftTorque", RobotState.getTorqueLeft());
+	        map.put("RightTorque", RobotState.getTorqueRight());
+	        map.put("TotalMass", RobotState.getMassTotal());
+
+	        
 	    	map.put("outputMin", outputMin);
 	    	map.put("outputMax", outputMax);
 	    	map.put("ErrorSumLeft", accumL);

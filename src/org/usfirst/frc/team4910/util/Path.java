@@ -58,7 +58,7 @@ public class Path {
 			switch(current.getPathType()){
 			case Heading:
 				//if(!RobotMap.isCompBot){
-				if(true){
+				if(true){ //this was for testing originally, don't judge
 					//					double p=0.0,i=0.0,d=0.0;/*IZoneMin=0.0,IZoneMax=0.0;*/
 					//					p=SmartDashboard.getNumber("kGP", RobotMap.driveGyroPID.getP());
 					//					i=SmartDashboard.getNumber("kGI", RobotMap.driveGyroPID.getI());
@@ -147,7 +147,7 @@ public class Path {
 						if(!robot.isAutonomous() && RobotMap.isCompBot && !RobotMap.testerCodeEnabled){
 							Robot.drive.disableHeadingMode();
 							Robot.drive.resetAll();
-							System.out.println("Potential error: Path exited early!");
+							System.out.println("Potential error: Path exited early!"); //i.e. we're in teleop now
 							reset();
 							Robot.drive.setControlState(DriveControlState.regular);
 							return;
@@ -178,6 +178,7 @@ public class Path {
 		System.out.println("Path overall time was "+(Timer.getFPGATimestamp()-start) + " Seconds");
 		reset();
 		Robot.drive.setControlState(DriveControlState.regular);
+		Robot.drive.resetAll();
 	}
 	/**
 	 * This clears all path elements. This shouldn't need to be called externally, but it's there just in case.
@@ -188,6 +189,7 @@ public class Path {
 	public synchronized void setPositionTimeThresh(double t){
 		PosThresh=t;
 	}
+	
 	/**
 	 * We have two problems. One encoder might be bad and we don't know which, and they both respond to changes in voltage differently.
 	 * They do, however, respond quickly to instant stops, so we're going to be using dead reckoning for compbot.
@@ -294,4 +296,6 @@ public class Path {
         	RobotMap.left1.set(-left);
         	RobotMap.right1.set(right);
 	}
+	
+	
 }

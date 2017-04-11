@@ -130,16 +130,17 @@ public class Robot extends IterativeRobot {
         	iteratorEnabled.start();
         	iteratorDisabled.stop();
         	RobotMap.c.stop();
-        	Timer.delay(.03);
+        	Timer.delay(.08);
         	pat.reset();
         	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
         	RobotMap.gates.set(DoubleSolenoid.Value.kReverse); //Close gates
+        	Timer.delay(.1);
         	//vision.startPegTracking();
         	//The point of this is to drive partly to the peg, and then use vision tracking to correct itself,
         	//since we can't expect the human to place it in the right place each time
         	boolean nothing=false;
-        	double initialTurnAngleLeft = RobotMap.isCompBot ? 58.0: 60.0; //We didn't have enough time to fully tune PID but it was close enough to this
-        	double initialTurnAngleRight = RobotMap.isCompBot ? 62.0 : 60.0;
+        	double initialTurnAngleLeft = RobotMap.isCompBot ? 60.0: 60.0; //We didn't have enough time to fully tune PID but it was close enough to this
+        	double initialTurnAngleRight = RobotMap.isCompBot ? 60.0 : 60.0;
         	//double initDist= RobotMap.isCompBot ? 80 : 94.5;
         	double initDist= RobotMap.isCompBot ? 88.0 : 82;
         	switch((String)autoChoose.getSelected()){
@@ -147,19 +148,39 @@ public class Robot extends IterativeRobot {
         		nothing=true;
         		break;
         	case "Red Left":
-        		visionAlternate(-initialTurnAngleLeft);
-//        		pat.setPositionTimeThresh(7.25);
-//        		pat.register(Path.PathType.Position, -(initDist-14.5));
+        		visionAlternateAlternate(-initialTurnAngleLeft);
+        		//visionAlternate(-initialTurnAngleLeft);
+        		
+////        		pat.setPositionTimeThresh(7.25);
+//        		pat.register(Path.PathType.Position, -(88-14.5));
 //        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
 //        		pat.Iterate();
+//        		
+//        		vision.startPegTracking();
+//        		while(vision.getCurrentIteration()<=2);
+//        		double a=-vision.getAveragePegAngle();
+//        		vision.stopPegTracking();
+//        		pat.register(PathType.Heading, a);
+//        		pat.register(Path.PathType.Position, (-(65.5-14.5))/2.0);
+//        		pat.Iterate();        		
+//        		
+//        		vision.startPegTracking();
+//        		while(vision.getCurrentIteration()<=2);
+//        		double a2=-vision.getAveragePegAngle();
+//        		vision.stopPegTracking();
+//        		pat.register(PathType.Heading, a2);
+//        		pat.register(Path.PathType.Position, (-(65.5-14.5))/2.0);
+//        		pat.Iterate();
+//        		
+        		
 //        		pat.setPositionTimeThresh(7.25);
         		//trackAndMove();
         		break;
         	case "Red Middle":
-        		middleAuto();
+        		middleAutoAlternate();
         		break;
         	case "Red Right":
-        		visionAlternate(initialTurnAngleRight);
+        		visionAlternateAlternate(initialTurnAngleRight);
 //        		pat.setPositionTimeThresh(7.25);
 //        		pat.register(Path.PathType.Position, -(initDist-14.5));
 //        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
@@ -168,7 +189,29 @@ public class Robot extends IterativeRobot {
         		//trackAndMove();
         		break;
         	case "Blue Left":
-        		visionAlternate(-initialTurnAngleLeft);
+        		//visionAlternate(-initialTurnAngleLeft);
+        		visionAlternateAlternate(-initialTurnAngleLeft);
+//        		pat.register(Path.PathType.Position, -(88-14.5));
+//        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
+//        		pat.Iterate();
+//        		
+//        		vision.startPegTracking();
+//        		while(vision.getCurrentIteration()<=2);
+//        		double a3=-vision.getAveragePegAngle();
+//        		vision.stopPegTracking();
+//        		pat.register(PathType.Heading, a3);
+//        		pat.register(Path.PathType.Position, (-(65.5-14.5))/2.0);
+//        		pat.Iterate();        		
+//        		
+//        		vision.startPegTracking();
+//        		while(vision.getCurrentIteration()<=2);
+//        		double a4=-vision.getAveragePegAngle();
+//        		vision.stopPegTracking();
+//        		pat.register(PathType.Heading, a4);
+//        		pat.register(Path.PathType.Position, (-(65.5-14.5))/2.0);
+//        		pat.Iterate();
+//        		
+        		
 //        		pat.setPositionTimeThresh(7.25);
 //        		pat.register(Path.PathType.Position, -(initDist-14.5));
 //        		pat.register(Path.PathType.Heading, -initialTurnAngleLeft);
@@ -177,10 +220,10 @@ public class Robot extends IterativeRobot {
         		//trackAndMove();
         		break;
         	case "Blue Middle":
-        		middleAuto();
+        		middleAutoAlternate();
         		break;
         	case "Blue Right":
-        		visionAlternate(initialTurnAngleLeft);
+        		visionAlternateAlternate(initialTurnAngleLeft);
 //        		pat.setPositionTimeThresh(7.25);
 //        		pat.register(Path.PathType.Position, -(initDist-14.5));
 //        		pat.register(Path.PathType.Heading, initialTurnAngleRight);
@@ -199,9 +242,18 @@ public class Robot extends IterativeRobot {
         	if(!nothing && RobotMap.isCompBot && ((String)gearAutoChoose.getSelected()).equals("Open gates in auto")){
         		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
         		RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
-        		Timer.delay(.16);
+        		Timer.delay(.9); //was .56
         		pat.register(Path.PathType.Position, 24.0); //go back two feet
         		pat.Iterate();
+        	
+        		
+        		if(((String)autoChoose.getSelected()).contains("Left")){
+        			pat.register(Path.PathType.Heading, 58.0);
+        			pat.register(PathType.Position, -(90.0+(67.0+12.0-24.0))); 
+        			//90 is dist from base line to neutral zone, 67 is half the neutral zone, and 24 is the ending distance from the base line after backing up
+        			//and the 12.0 (or whatever I add to 67.0 if I don't update this comment) is the tuned value
+        			pat.Iterate();
+        		}
         	}
         	RobotMap.c.start();
         	//vision.stopPegTracking();
@@ -244,31 +296,35 @@ public class Robot extends IterativeRobot {
     
     public void teleopPeriodic() {
         try{
-        	if(OI.thirdStick.getRawButton(OI.cameraDebugTest) && !RobotMap.isCompBot){
-        		while(OI.thirdStick.getRawButton(OI.cameraDebugTest));
-        		visionAlternate(-60.0);
-        	}
-        	if(OI.thirdStick.getRawButton(OI.forwardAutoTest) && !RobotMap.isCompBot){
-        		while(OI.thirdStick.getRawButton(OI.forwardAutoTest));
-        		
-        		RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
-            	Timer.delay(.05);
-        		pat.register(PathType.Position, -96+38.5);
-        		pat.Iterate();
-        		
-            	vision.startPegTracking();
-            	while(vision.getCurrentIteration()<=4);
-            	double vang=-vision.getAveragePegAngle();
-            	//double vdist=-vision.getAveragePegDistance();
-            	vision.stopPegTracking();
-            	pat.register(PathType.Heading, vang);
-            	pat.Iterate();
-        		
-        		Timer.delay(.07);
-        		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
-        		pat.register(PathType.Position, -9-ult);
-        		pat.Iterate();
-        	}
+//        	if(OI.thirdStick.getRawButton(OI.cameraDebugTest) /*&& !RobotMap.isCompBot*/){
+//        		while(OI.thirdStick.getRawButton(OI.cameraDebugTest));
+//        		if(RobotMap.isCompBot){
+//        			visionAlternate(-60.0);
+//            		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
+//        		}else{
+//        			visionAlternatePracticeBot(-60.0);
+//        		}
+//        		
+////        		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
+//        		RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
+//        		Timer.delay(.16);
+//        		pat.register(Path.PathType.Position, 24.0); //go back two feet
+//        		pat.Iterate();
+//            	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+//            	
+//            	
+//            	pat.register(Path.PathType.Heading, 58.0);
+//            	pat.register(PathType.Position, -(90.0+(67.0+12.0-24.0))); 
+//            	//90 is dist from base line to neutral zone, 67 is half the neutral zone, and 24 is the ending distance from the base line after backing up
+//            	//and the 12.0 (or whatever I add to 67.0 if I don't update this comment) is the tuned value
+//            	pat.Iterate();
+//            	
+//            	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear, but switch quickly so it actually compresses
+//            	
+//            	if(RobotMap.isCompBot)
+//            		RobotMap.gates.set(DoubleSolenoid.Value.kReverse); //Close gates
+////            	
+//        	}
         	if(RobotMap.testerCodeEnabled){
         		testerCode();
         	}
@@ -363,6 +419,7 @@ public class Robot extends IterativeRobot {
      * Then you copy the file over and run a plotter script, or just use excel. I will upload the script I used to github. (python 2.7)
      * You don't need to know python, just follow the same format I did.
      * 
+     *  ////////////////Name changed after columbus, you can keep the "TestingDataPostColumbus" name, or change it back to "TestingData"////////////////
      */
     public void createNewCSV(){
     	try{
@@ -370,7 +427,7 @@ public class Robot extends IterativeRobot {
     		Calendar now = Calendar.getInstance();
 			String str = String.valueOf(now.get(Calendar.MONTH))+"."+String.valueOf(now.get(Calendar.DAY_OF_MONTH))+"."
 					+String.valueOf(now.get(Calendar.HOUR_OF_DAY))+"."+String.valueOf(now.get(Calendar.MINUTE))+"."+String.valueOf(now.get(Calendar.SECOND));
-			File f = new File("/home/lvuser/TestingData"+str+".csv");
+			File f = new File("/home/lvuser/TestingDataPostColumbus"+str+".csv");
 			RobotMap.writer = new CSVWriter(new FileWriter(f), ',');
 //			String[] tabNames = ("Time#LeftError#RightError#LeftPosition#RightPosition#LeftVelocity#RightVelocity#LeftSetpoint"
 //					+ "#RightSetpoint#WeightedLeftError#WeightedRightError#WeightedLeftPosition#WeightedRightPosition"
@@ -390,6 +447,55 @@ public class Robot extends IterativeRobot {
      * 
      */
     private void testerCode(){
+    	if(OI.thirdStick.getRawButton(OI.cameraDebugTest) /*&& !RobotMap.isCompBot*/){
+    		while(OI.thirdStick.getRawButton(OI.cameraDebugTest));
+			RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+    		visionAlternateAlternate(-60.0);
+    		
+//    		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
+//    		RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
+//    		Timer.delay(.16);
+//    		pat.register(Path.PathType.Position, 24.0); //go back two feet
+//    		pat.Iterate();
+//        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+//        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear, but switch quickly so it actually compresses
+//        	RobotMap.gates.set(DoubleSolenoid.Value.kReverse); //Close gates
+    	}
+    	if(OI.thirdStick.getRawButton(OI.forwardAutoTest) /*&& !RobotMap.isCompBot*/){
+    		while(OI.thirdStick.getRawButton(OI.forwardAutoTest));
+//    		
+//    		RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
+//        	Timer.delay(.05);
+//    		pat.register(PathType.Position, -94+38.5);
+//    		pat.Iterate();
+//    		
+//        	vision.startPegTracking();
+//        	while(vision.getCurrentIteration()<=4);
+//        	double vang=-vision.getAveragePegAngle();
+//        	//double vdist=-vision.getAveragePegDistance();
+//        	vision.stopPegTracking();
+//        	pat.register(PathType.Heading, vang);
+//        	pat.Iterate();
+//    		
+//    		Timer.delay(.07);
+//    		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+//    		pat.register(PathType.Position, -12-ult);
+//    		pat.Iterate();
+//    		
+//    		
+//    		RobotMap.gates.set(DoubleSolenoid.Value.kForward); //Open gates
+//    		RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward);
+//    		Timer.delay(.16);
+//    		pat.register(Path.PathType.Position, 24.0); //go back two feet
+//    		pat.Iterate();
+//        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+//        	RobotMap.gearShifter.set(DoubleSolenoid.Value.kForward); //Start in high gear, but switch quickly so it actually compresses
+//        	RobotMap.gates.set(DoubleSolenoid.Value.kReverse); //Close gates
+    		if(!RobotMap.isCompBot){
+    			RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse);
+    			middleAutoAlternate();
+    		}
+    	}
     	if(OI.rightStick.getRawButton(OI.AutoTest)){
     		while(OI.rightStick.getRawButton(OI.AutoTest));
     		pat.setPositionTimeThresh(7.25);
@@ -628,26 +734,29 @@ public class Robot extends IterativeRobot {
 		}
     }
     private void middleAuto(){
-		double initialDist= RobotMap.isCompBot ? -73.0 : -58;
+    	//TODO: remember to switch all "true" statements before comp to RobotMap.isCompBot
+		if(true){
+    	double initialDist= true ? -73.0 : -58;
 		double denom=1.8;
 		pat.register(Path.PathType.Position, initialDist/denom);
 		pat.Iterate();
 		
-		double ang=0.0, dist, angThresh=0.1; //throws a duplicate variable error for some reason, which is illogical
+		double ang=0.0, dist, angThresh=0.1;
 		//correct angle
 		vision.startPegTracking();
 		while(vision.getCurrentIteration()<=4);
 		ang=-vision.getAveragePegAngle();
-		dist=-vision.getAveragePegDistance();
+		dist=2.0-vision.getAveragePegDistance();
 		vision.stopPegTracking();
 		if(Math.abs(ang)>angThresh){
-			pat.register(PathType.Heading, 1.2*ang+2.4);
+			pat.register(PathType.Heading, 1.2*ang);
 			pat.Iterate();
 		}
-		dist = (dist+((initialDist-(initialDist/denom))))/2.0; //average with expected
+		dist = 3+((dist+((initialDist-(initialDist/denom))))/2.0); //average with expected
+		dist=Math.min(-35.0, dist);
 		pat.register(Path.PathType.Position, dist);
 		pat.Iterate();
-		
+		 
 		//correct angle
 		vision.startPegTracking();
 		while(vision.getCurrentIteration()<=2);
@@ -658,23 +767,129 @@ public class Robot extends IterativeRobot {
 			pat.Iterate();
 		}
 		
-		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
-		if(RobotMap.isCompBot){
-			ult = ult<4.0 ? -13.0 : -(ult+11.0);
-		}else{
-			ult=-12.0;
-		}
-		pat.register(PathType.Position, ult);
+//		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+//		if(true){
+//			ult = ult<4.0 ? -13.0 : -(ult+11.0);
+//		}else{
+//			ult=-12.0;
+//		}
+		pat.register(PathType.Position, -13.0);
 		pat.Iterate();
+		}else{
+			middleAutoAlternate();
+		}
     }
     /**
      * I intend for this method to use known variables and vision at the very beginning of 
      * the match to calculate my expected first and last distances.
      * This was written after the first district competition, but before the second one.
      * 
-     * @param initAng The initial angle. This does not have to be explicitly equal to +/-60, but don't expect this to work for the middle peg.
+     * Apparently this works very well. The camera can hardly even see it so we had to rotate the camera and just hope our tuned values
+     * would work, and they somewhat did. If they didn't, we would've done "vision.getAveragePegAngle() +/- 3"
+     * 
+     * 
+     * @param initAng The pegs angle. This does not have to be explicitly equal to +/-60, but it's like this because the peg-vector is +/- 60 deg from the wall.
      */
     private void visionAlternate(double initAng){
+    	if(RobotMap.isCompBot){
+    	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
+    	Timer.delay(.05);
+    	vision.startPegTracking();
+    	double vang=0.0,vdist=0.0, vAvgOffset; final double initDist=125.5-38.5; //38.5 is robot length, 131.0 is dist from peg to wall
+    	while(vision.getCurrentIteration()<=4);
+    	vang=-vision.getAveragePegAngle(); //this is always backwards, by the way
+    	vang+=Math.signum(vang)*14.0; //
+    	vdist=vision.getAveragePegDistance(); //this is only positive for the purpose of the calculation
+    	vision.stopPegTracking();
+    	double offsetDistCalc=Math.signum(vang)*Math.sqrt(vdist*vdist-initDist*initDist); //calculates distance based on distance
+    	double offsetAngCalc=initDist*Math.tan(vang*Math.PI/180.0); //calculates distance based on angle
+    	//vAvgOffset = (240.0*offsetAngCalc+320.0*offsetDistCalc)/560.0; //weighted average to account for either:
+    																	//camera distortion, top-bottom or left-right noise shifting the image center,
+    																	//and whatever linear regression messes up on
+    	vAvgOffset=offsetAngCalc; //Apparently the offsetDistCalc doesn't return a good number when its at an angle.
+    							//This makes some logical sense, and it'd probably return a better value if it were a
+    							//higher resolution or zoomed in more.
+    	double firstDist=initDist-31.0-Math.signum(vAvgOffset)*vAvgOffset/Math.tan(initAng*Math.PI/180.0); //I think this 31 came out of the same place 19.25 did
+    	double secondDist=19.25+Math.hypot(vAvgOffset, vAvgOffset/Math.tan(initAng*Math.PI/180.0));
+    	firstDist=-16.25-firstDist; //19.25, 9.625 (19.25 is 1/4th our robot length, I don't quite understand why this works)
+    	secondDist=45.0-secondDist; //yes 12.0 should be positive (12.0 came out of nowhere as well)
+    	//System.out.println(vang+" "+vdist+" "+offsetDistCalc+" "+offsetAngCalc+" "+vAvgOffset);
+    	System.out.println("First Dist: "+firstDist+"\nTurning angle: "+initAng+"\nSecond Dist: "+secondDist);
+    	
+    	
+//    	
+//    	//check if it's giving the right values before doing this
+    	
+    	pat.register(PathType.Position, firstDist);
+    	pat.Iterate();
+
+    	pat.register(PathType.Heading, initAng);
+		pat.Iterate();
+    	vision.startPegTracking();
+    	while(vision.getCurrentIteration()<=4);
+    	vang=-vision.getAveragePegAngle();
+    	vdist=-vision.getAveragePegDistance();
+    	vision.stopPegTracking();
+    	pat.register(PathType.Heading, vang);
+    	pat.register(PathType.Position, ((2*secondDist+vdist)/3.0)/2.0); //Bias for mathematically calculated values to correct for distortion
+    	pat.Iterate();
+    	
+		vision.startPegTracking();
+		while(vision.getCurrentIteration()<=2);
+		double ang=-vision.getAveragePegAngle();;
+		//double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+		vdist=-4.0-vision.getAveragePegDistance(); //In theory this shouldn't work, since it'd go the distance 
+												//to the peg + the big ultrasonic reading + 4 more inches, but I blame that error
+												//on the fact that we had to tilt the camera and the values it gives are now definitely off.
+		vision.stopPegTracking();
+		//if(Math.abs(ang)>1.0){ //If I want to add this back, I have to split this into two loops so it runs the position one
+			pat.register(PathType.Heading, ang);
+			pat.register(PathType.Position, ((2*secondDist+vdist)/3.0)/2.0);
+			pat.Iterate();
+		//}
+    	}else{
+    		visionAlternatePracticeBot(initAng);
+    	}
+    }
+    /**
+     * Goes up until it's within a foot, corrects itself with vision, and uses the ultrasonic sensor to do the rest
+     * 
+     * Apparently I forgot to make middle auto do "middleAutoAlternate" and only did middleAuto(), and that somehow worked for a couple matches
+     * But then it stopped working and so I switched back to this method, which we know worked at our build site, and it did not work.
+     * 
+     * I don't exactly know what to do here, but I'll test it out on practice bot some and then rework it at states.
+     * 
+     */
+    private void middleAutoAlternate(){
+    
+		pat.register(PathType.Position, -94+38.5);
+		pat.Iterate();
+		
+    	vision.startPegTracking();
+    	while(vision.getCurrentIteration()<=4);
+    	double vang=-vision.getAveragePegAngle();
+    	//double vdist=-vision.getAveragePegDistance();
+    	vision.stopPegTracking();
+    	//vang+=4.0;
+    	//vang = vang<0 ? vang-4.0 : vang; //if left, get rid of -4
+    	pat.register(PathType.Heading, vang);
+    	pat.Iterate();
+		
+		Timer.delay(.07);
+		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+		pat.register(PathType.Position, -11.5-ult); //was -12, then -7.5
+		pat.Iterate();
+		
+		
+		
+    }
+    
+    /**
+     * If I don't include compatability for practice bot, the mentors will get confused again.
+     * 
+     * @see #visionAlternate
+     */
+    private void visionAlternatePracticeBot(double initAng){
     	RobotMap.gearShifter.set(DoubleSolenoid.Value.kReverse); //Start in low gear
     	Timer.delay(.05);
     	vision.startPegTracking();
@@ -721,7 +936,44 @@ public class Robot extends IterativeRobot {
 		//}
     	
 		
-    	//do something with ultrasonic, we have to wait for that first
+    }
+    /**
+     * Goes some amount of inches, then runs middleAutoAlternate() code
+     * @param initAng -60 is left (turning right), 60 is right (turning left)
+     */
+    private void visionAlternateAlternate(double initAng){
+    	
+    	
+		pat.register(PathType.Position, -106.0+22.25);
+		pat.register(Path.PathType.Heading, initAng);
+		pat.Iterate();
+		
+    	vision.startPegTracking();
+    	while(vision.getCurrentIteration()<=4);
+    	double vang=vision.getAveragePegAngle();
+    	//double vdist=-vision.getAveragePegDistance();
+    	vision.stopPegTracking();
+    	pat.register(PathType.Heading, -vang);
+    	pat.Iterate();
+		
+		pat.register(PathType.Position, -18.75); //35
+		pat.Iterate();
+		Timer.delay(.3);
+    	
+    	vision.startPegTracking();
+    	while(vision.getCurrentIteration()<=4);
+    	double vang2=-vision.getAveragePegAngle();
+    	//double vdist=-vision.getAveragePegDistance();
+    	vision.stopPegTracking();
+    	pat.register(PathType.Heading, vang2);
+    	pat.Iterate();
+		
+		
+		Timer.delay(.07);
+		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
+		pat.register(PathType.Position, -7.5-ult); //was -12
+		pat.Iterate();
     	
     }
+    
 }

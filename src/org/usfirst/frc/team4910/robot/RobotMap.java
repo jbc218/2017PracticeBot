@@ -28,7 +28,7 @@ public class RobotMap {
 	public static BuiltInAccelerometer RIOAccel;
 	public static AnalogInput ultra;
 	
-	public static final boolean isCompBot=false;
+	public static final boolean isCompBot=true;
 	
 	public static final double DriveWheelDiameter=6;
 	public static final double EncCountsPerRev= (isCompBot&&false) ? 1440 : 4096; //4096 for practice bot, 1440 for compbot
@@ -61,10 +61,10 @@ public class RobotMap {
 //	public static final double GyroSmallKi=0.0;
 //	public static final double GyroSmallKd=0.0;
 	
-	public static final double shooterKp= isCompBot ? 0.04186 : .00237; //.003
-	public static final double shooterKi= isCompBot ? 1.81395E-4 : 0.869E-5; //1.3E-5
+	public static final double shooterKp= /*isCompBot ?*/ 0.04186;// : .00237; //.00237
+	public static final double shooterKi= /*isCompBot ?*/ 1.81395E-4;// : 0.869E-5; // 0.869E-5
 	public static final double shooterKd=0.0;
-	public static final double shooterKf= isCompBot ? 0.011627 : 6.3E-4;//8.0E-4;
+	public static final double shooterKf= /*isCompBot ?*/ 0.011627;// : 6.3E-4;//6.3E-4
 	public static final double shooterGuideKp=0.0;
 	public static final double shooterGuideKd=0.0;
 	public static final double shooterGuideKf=0.0;
@@ -128,14 +128,9 @@ public class RobotMap {
         right1.configEncoderCodesPerRev((int)(EncCountsPerRev));
         shootControl.configEncoderCodesPerRev(75);
         
-
-        if((isCompBot&&false)){
-        	left1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
-        	right1.setFeedbackDevice(CANTalon.FeedbackDevice.QuadEncoder);
-        }else{
-        	left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
-        	right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
-        }  
+        left1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+        right1.setFeedbackDevice(CANTalon.FeedbackDevice.CtreMagEncoder_Relative);
+         
     	left1.setVoltageRampRate(0);
     	right1.setVoltageRampRate(0);
         shootControl.setVoltageRampRate(24);
@@ -152,27 +147,9 @@ public class RobotMap {
         right1.reverseSensor(false);
         right1.reverseOutput(true);
         right2.reverseOutput(false);
-        Robot.compressorEnabled=false;
+        Robot.compressorEnabled=false; //potentially unused
         
 		
-        
-        
-        
-        
-        
-        
-        /**
-         * 
-         * 
-         * Remember to update firmware, etc
-         * 
-         * 
-         */
-        
-        
-        
-        
-        
         
         
 	}
