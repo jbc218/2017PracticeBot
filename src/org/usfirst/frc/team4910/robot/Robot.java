@@ -948,26 +948,47 @@ public class Robot extends IterativeRobot {
 		pat.register(Path.PathType.Heading, initAng);
 		pat.Iterate();
 		
-    	vision.startPegTracking();
-    	while(vision.getCurrentIteration()<=4);
-    	double vang=vision.getAveragePegAngle();
-    	//double vdist=-vision.getAveragePegDistance();
-    	vision.stopPegTracking();
-    	pat.register(PathType.Heading, -vang);
-    	pat.Iterate();
 		
+		if(((String)autoChoose.getSelected()).contains("Right")){
+			vision.startPegTracking();
+    		while(vision.getCurrentIteration()<=4);
+    		double vang=-vision.getAveragePegAngle(); //negative for some reason (I don't trust it)
+    		//double vdist=-vision.getAveragePegDistance();
+    		vision.stopPegTracking();
+    		pat.register(PathType.Heading, -vang);
+    		pat.Iterate();
+		}else{ //normal case
+			vision.startPegTracking();
+    		while(vision.getCurrentIteration()<=4);
+    		double vang=vision.getAveragePegAngle(); //normal
+    		//double vdist=-vision.getAveragePegDistance();
+    		vision.stopPegTracking();
+    		pat.register(PathType.Heading, -vang);
+    		pat.Iterate();
+		}
+    	
 		pat.register(PathType.Position, -18.75); //35
 		pat.Iterate();
 		Timer.delay(.3);
     	
-    	vision.startPegTracking();
-    	while(vision.getCurrentIteration()<=4);
-    	double vang2=-vision.getAveragePegAngle();
-    	//double vdist=-vision.getAveragePegDistance();
-    	vision.stopPegTracking();
-    	pat.register(PathType.Heading, vang2);
-    	pat.Iterate();
 		
+		if(((String)autoChoose.getSelected()).contains("Right")){
+	    	vision.startPegTracking();
+	    	while(vision.getCurrentIteration()<=4);
+	    	double vang2=vision.getAveragePegAngle(); //this will probably correct whatever the first one does wrong
+	    	//double vdist=-vision.getAveragePegDistance();
+	    	vision.stopPegTracking();
+	    	pat.register(PathType.Heading, vang2);
+	    	pat.Iterate();
+		}else{ //normal case
+	    	vision.startPegTracking();
+	    	while(vision.getCurrentIteration()<=4);
+	    	double vang2=-vision.getAveragePegAngle(); //normal case as well for some reason
+	    	//double vdist=-vision.getAveragePegDistance();
+	    	vision.stopPegTracking();
+	    	pat.register(PathType.Heading, vang2);
+	    	pat.Iterate();
+		}
 		
 		Timer.delay(.07);
 		double ult = ((((RobotMap.ultra.getVoltage()) * 3.47826087) - 0.25)*12.0)-6.0;
