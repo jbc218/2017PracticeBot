@@ -21,7 +21,7 @@ There is a plotter tool to plot data from a csv file (documented in Robot.java) 
 
 The only libraries you could get away with not installing and not have any errors are SF2, pathfinder, and possibly NavX.
 
-# Completed and working functions as of directly after states
+# Completed and working functions as of directly after ~~states~~ worlds
 + Climbing
 + Intaking
 + Agitating and shooting
@@ -31,6 +31,7 @@ The only libraries you could get away with not installing and not have any error
 + Working vision tracking code, but could use more tuning (too late now)
 + Working left (right turn) autonomous (but not middle or right)
 + Gate and shifter gear functionality
++ Left position only autonomous
 
 # Things left to do
 + Add a DoubleSolenoid.Value object in RobotMap, as Value.Reverse isn't as helpful as RobotMap.GatesOpen
