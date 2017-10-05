@@ -13,10 +13,11 @@
 			<attribute name="javadoc_location" value="file:/C:/Users/JBC218/wpilib/user/java/src/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="var" path="USERLIBS_DIR/opencsv-3.8-sources.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/opencsv-3.8.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/navx_frc.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/sf2-frc.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/Pathfinder-Java.jar"/>
+	<classpathentry kind="var" path="USERLIBS_DIR/protobuf-java-3.3.0.jar"/>
+	<classpathentry kind="var" path="USERLIBS_DIR/jeromq-0.4.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
