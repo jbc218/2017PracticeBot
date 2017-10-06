@@ -67,6 +67,7 @@ public class Robot extends IterativeRobot {
         	climb = Climber.getInstance();
         	pat = new Path();
         	jetson = new Jetson();
+        	jetson.startZMQ();
         	CrashTracker.logRobotInit();
         	iteratorEnabled.register(RobotState.iter);
         	iteratorEnabled.register(drive.getLoop());

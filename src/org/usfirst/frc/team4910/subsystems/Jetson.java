@@ -13,7 +13,7 @@ import org.usfirst.frc.team4910.util.Peg;
 /**
  * This is the class that comuicates with the jetson
  */
-public class Jetson extends Subsystem 
+public class Jetson
 {
 	// This stores the context of the system
 	private Context context = ZMQ.context(1);
@@ -25,7 +25,7 @@ public class Jetson extends Subsystem
 	 * This command runs on robot init
 	 * It sets up the context and socket and connects to the jetson PUB 
 	 */
-	public void initDefaultCommand() {
+	public void startZMQ() {
 		sub.setConflate(true); // Only get the most recent messages
 		sub.connect("tcp://10.49.10.200:49100");
 		sub.subscribe("".getBytes());
